@@ -4,6 +4,9 @@ Generate browsable HTML galleries from CLI terminal output. Like Storybook, but 
 
 Captures ANSI-colored output and renders it as a static page with a grid layout, dark/light themes, click-to-expand terminals, and sidebar navigation.
 
+<img width="3892" height="2196" alt="cli" src="https://github.com/user-attachments/assets/da17c2db-f739-400e-9dd3-d597020f00eb" />
+
+
 ## Usage
 
 ```go
@@ -44,18 +47,18 @@ func capture(rootCmd *cobra.Command, args ...string) string {
 
 ```go
 // Branding
-termbook.WithGitHub("https://github.com/...")   // star link in header
-termbook.WithIntro("Generated from real output") // intro text below header
+termbook.WithGitHub("https://github.com/...")          // star link in header
+termbook.WithIntro("Generated from real output")       // intro text below header
 
 // Appearance
-termbook.WithAccent("#FF6B6B")                   // accent color (both themes)
-termbook.WithDefaultTheme("light")               // "dark" (default) or "light"
-termbook.WithFont("Fira Code",                   // custom monospace font
+termbook.WithAccent("#FF6B6B")                         // accent color (both themes)
+termbook.WithDefaultTheme("light")                     // "dark" (default) or "light"
+termbook.WithFont("Fira Code",                         // custom monospace font
     "https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap")
-termbook.WithColumns(2)                          // grid columns (default 3)
+termbook.WithColumns(2)                                // grid columns (default 3)
 
 // Advanced
-termbook.WithCSS(".terminal pre { font-size: 14px }") // inject extra CSS
+termbook.WithCSS(".terminal pre { font-size: 14px }")  // inject extra CSS
 termbook.WithTemplate(myHTML)                          // replace entire template
 ```
 
