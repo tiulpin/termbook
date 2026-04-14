@@ -69,3 +69,8 @@ Zero config works out of the box. Each option layers on independently.
 ```
 go get github.com/tiulpin/termbook
 ```
+
+## See also
+
+- [terminal-to-html](https://github.com/buildkite/terminal-to-html) by Buildkite — standalone CLI to convert ANSI terminal output to HTML
+- [VHS](https://github.com/charmbracelet/vhs) by Charm — record terminal sessions as GIFs/MP4s from tape files
