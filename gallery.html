@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{.DefaultTheme}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="{{.FontURL}}" rel="stylesheet">
+<style>
+:root, [data-theme="dark"] {
+  --bg: #0e0e0e; --bg-sidebar: #080808; --surface: #171717; --surface-cmd: #131313;
+  --border: #222; --border-accent: #282828; --text: #c8c8c8; --text-secondary: #4a4a4a;
+  --accent: #07C3F2; --accent-glow: rgba(7,195,242,0.08); --cmd-color: #4EC5B9;
+  --sidebar-w: 200px;
+  --t-black: #444; --t-red: #f47067; --t-green: #57ab5a; --t-yellow: #c69026;
+  --t-blue: #539bf5; --t-magenta: #b083f0; --t-cyan: #39c5cf; --t-white: #c8c8c8;
+  --t-br-black: #636e7b; --t-br-red: #ff938a; --t-br-green: #6bc46d; --t-br-yellow: #daaa3f;
+  --t-br-blue: #6cb6ff; --t-br-magenta: #dcbdfb; --t-br-cyan: #56d4dd; --t-br-white: #f0f0f0;
+  --t-dim-opacity: 0.45;
+  --dot-close: #ff5f57; --dot-min: #febc2e; --dot-max: #28c840;
+}
+[data-theme="light"] {
+  --bg: #ededed; --bg-sidebar: #e4e4e4; --surface: #fff; --surface-cmd: #f7f7f7;
+  --border: #ccc; --border-accent: #bbb; --text: #1a1a1a; --text-secondary: #888;
+  --accent: #0591b2; --accent-glow: rgba(5,145,178,0.06); --cmd-color: #0e7a6e;
+  --t-black: #1a1a1a; --t-red: #c4302b; --t-green: #1a7f37; --t-yellow: #856d00;
+  --t-blue: #0550ae; --t-magenta: #6639ba; --t-cyan: #0a6e7a; --t-white: #555;
+  --t-br-black: #444; --t-br-red: #a40e26; --t-br-green: #116329; --t-br-yellow: #633c01;
+  --t-br-blue: #0969da; --t-br-magenta: #8250df; --t-br-cyan: #0e7a6e; --t-br-white: #1a1a1a;
+  --t-dim-opacity: 0.5;
+  --dot-close: #ff5f57; --dot-min: #febc2e; --dot-max: #28c840;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg); color: var(--text);
+  line-height: 1.6; font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 16px 0; z-index: 10;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.sidebar-brand {
+  padding: 0 14px 14px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+  font-size: 12px; color: var(--text-secondary); letter-spacing: 0.5px;
+}
+.sidebar-brand strong {
+  color: var(--accent); font-weight: 700; font-size: 14px; display: block; letter-spacing: 0;
+}
+.sidebar h2 {
+  font-size: 10px; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  padding: 14px 14px 4px; margin: 0;
+}
+.sidebar h2 .count { opacity: 0.35; font-weight: 400; }
+.sidebar a {
+  display: block; padding: 2px 14px 2px 22px;
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 12px; line-height: 1.8;
+  border-left: 2px solid transparent; transition: all 0.15s;
+}
+.sidebar a:hover { color: var(--text); border-left-color: var(--accent); background: var(--accent-glow); }
+.sidebar a.active { color: var(--accent); border-left-color: var(--accent); }
+
+/* --- Main --- */
+.main { margin-left: var(--sidebar-w); padding: 48px 36px; max-width: none; }
+
+.main > header {
+  margin-bottom: 64px; display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.main > header::after {
+  content: ""; position: absolute; bottom: -1px; left: 0; width: 120px; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+.main > header div p { color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+.header-title {
+  font-size: 26px; font-weight: 700; color: var(--accent);
+  letter-spacing: -0.5px;
+}
+.header-title span { color: var(--text-secondary); font-weight: 400; }
+
+.header-actions { display: flex; gap: 8px; }
+.theme-toggle {
+  background: none; border: 1px solid var(--border); color: var(--text-secondary);
+  padding: 5px 14px; cursor: pointer; font-size: 11px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+  transition: all 0.2s; text-decoration: none;
+}
+.theme-toggle:hover { color: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+/* --- Intro --- */
+.intro { margin-bottom: 48px; font-size: 12px; color: var(--text-secondary); }
+
+/* --- Categories --- */
+.category { margin-bottom: 64px; }
+.category > h2 {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 2.5px;
+  margin-bottom: 24px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.category > h2::before { content: "# "; color: var(--text-secondary); }
+.category > h2::after {
+  content: ""; position: absolute; bottom: -1px; left: 0; width: 60px; height: 1px;
+  background: var(--accent);
+}
+
+.screens { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+/* --- Screen cards --- */
+.screen {
+  transition: box-shadow 0.2s;
+  min-width: 0;
+  opacity: 0; transform: translateY(8px);
+  animation: cardIn 0.4s ease forwards;
+}
+.screen:hover {
+  box-shadow: 0 0 24px var(--accent-glow);
+}
+
+@keyframes cardIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen-header { padding: 8px 0 4px 14px; }
+.screen-header h3 {
+  font-size: 13px; font-weight: 500; color: var(--text);
+}
+.screen-header h3::before { content: "// "; color: var(--text-secondary); font-weight: 400; }
+.screen-header p {
+  font-size: 10px; color: var(--text-secondary); margin: 0; padding-left: 2.3em;
+}
+
+.screen-cmd {
+  padding: 5px 14px; margin: 4px 0 0;
+  font-size: 11px; color: var(--cmd-color);
+}
+.screen-cmd::before { content: "$ "; color: var(--text-secondary); }
+
+/* --- Terminal window --- */
+.terminal {
+  margin: 4px 0 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: none;
+  max-height: calc(10 * 1.5em + 44px); overflow: hidden; position: relative; cursor: pointer;
+  transition: max-height 0.3s ease;
+}
+.terminal-chrome {
+  padding: 7px 12px; display: flex; gap: 5px; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-cmd);
+}
+.terminal-chrome i {
+  width: 8px; height: 8px; border-radius: 50%; display: block;
+}
+.terminal-chrome i:nth-child(1) { background: var(--dot-close); }
+.terminal-chrome i:nth-child(2) { background: var(--dot-min); }
+.terminal-chrome i:nth-child(3) { background: var(--dot-max); }
+.terminal-body { padding: 10px 14px; overflow-x: auto; }
+.terminal.overflows::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+  background: linear-gradient(transparent 0%, var(--surface) 80%);
+  pointer-events: none;
+}
+.terminal.expanded { max-height: none; }
+.terminal.expanded::after { display: none; }
+.terminal pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.5; color: var(--text);
+  margin: 0; white-space: pre; tab-size: 8;
+}
+
+@media (max-width: 1100px) {
+  .screens { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 24px 16px; }
+  .main > header { flex-direction: column; gap: 16px; }
+  .header-title { font-size: 20px; }
+  .screens { grid-template-columns: 1fr; }
+  .terminal { margin-left: 0; }
+  .screen-cmd { font-size: 10px; overflow-x: auto; }
+}
+
+/* --- Terminal ANSI classes --- */
+.term-fg1, .term-bold { font-weight: 700; }
+.term-fg2, .term-dim  { opacity: var(--t-dim-opacity); }
+.term-fg3, .term-italic { font-style: italic; }
+.term-fg4, .term-underline { text-decoration: underline; }
+.term-fg30 { color: var(--t-black); } .term-fg31 { color: var(--t-red); } .term-fg32 { color: var(--t-green); }
+.term-fg33 { color: var(--t-yellow); } .term-fg34 { color: var(--t-blue); } .term-fg35 { color: var(--t-magenta); }
+.term-fg36 { color: var(--t-cyan); } .term-fg37 { color: var(--t-white); }
+.term-fg90 { color: var(--t-br-black); } .term-fg91 { color: var(--t-br-red); } .term-fg92 { color: var(--t-br-green); }
+.term-fg93 { color: var(--t-br-yellow); } .term-fg94 { color: var(--t-br-blue); } .term-fg95 { color: var(--t-br-magenta); }
+.term-fg96 { color: var(--t-br-cyan); } .term-fg97 { color: var(--t-br-white); }
+.term-bg40 { background: var(--t-black); } .term-bg41 { background: var(--t-red); } .term-bg42 { background: var(--t-green); }
+.term-bg43 { background: var(--t-yellow); } .term-bg44 { background: var(--t-blue); } .term-bg45 { background: var(--t-magenta); }
+.term-bg46 { background: var(--t-cyan); } .term-bg47 { background: var(--t-white); }
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+{{if .CustomCSS}}
+/* --- Custom overrides --- */
+{{.CustomCSS}}
+{{end}}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <strong>termbook</strong>
+    screen gallery
+  </div>
+  {{range .Categories}}<h2>{{.Name}} <span class="count">{{len .Screens}}</span></h2>
+  {{range .Screens}}<a href="#{{.ID}}" data-target="{{.ID}}">{{.Title}}</a>
+  {{end}}{{end}}
+</nav>
+
+<div class="main">
+  <header>
+    <div>
+      <div class="header-title">{{.Title}}</div>
+      <p>{{.ScreenCount}} screens &middot; generated {{.Generated}}</p>
+    </div>
+    <div class="header-actions">
+      {{if .GitHubURL}}<a class="theme-toggle" href="{{.GitHubURL}}" target="_blank" rel="noopener">[&#9733; github]</a>{{end}}
+      <button class="theme-toggle" onclick="toggleTheme()">[theme: <span id="theme-label">dark</span>]</button>
+    </div>
+  </header>
+
+  {{if .Intro}}<p class="intro">{{.Intro}}</p>{{end}}
+
+  {{range .Categories}}<section class="category" id="{{.ID}}">
+    <h2>{{.Name}}</h2>
+    <div class="screens">
+    {{range .Screens}}<div class="screen" id="{{.ID}}">
+      <div class="screen-header"><h3>{{.Title}}</h3>{{if .Desc}}<p>{{.Desc}}</p>{{end}}</div>
+      {{if .Command}}<div class="screen-cmd">{{.Command}}</div>{{end}}
+      <div class="terminal"><div class="terminal-chrome"><i></i><i></i><i></i></div><div class="terminal-body"><pre>{{.HTML}}</pre></div></div>
+    </div>
+    {{end}}
+    </div>
+  </section>
+  {{end}}
+</div>
+
+<script>
+(function(){
+  var s=localStorage.getItem('tc-gallery-theme');
+  if(s){document.documentElement.dataset.theme=s;document.getElementById('theme-label').textContent=s}
+})();
+function toggleTheme(){
+  var t=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=t;
+  localStorage.setItem('tc-gallery-theme',t);
+  document.getElementById('theme-label').textContent=t;
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('.terminal');
+  if(t){t.classList.toggle('expanded');markOverflows()}
+});
+function markOverflows(){
+  document.querySelectorAll('.terminal').forEach(function(t){
+    t.classList.toggle('overflows',!t.classList.contains('expanded')&&t.scrollHeight>t.clientHeight)
+  });
+}
+window.addEventListener('load',markOverflows);
+window.addEventListener('resize',markOverflows);
+
+/* Scroll-spy: highlight active sidebar link */
+var observer = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    var link = document.querySelector('.sidebar a[data-target="'+e.target.id+'"]');
+    if(link){ link.classList.toggle('active', e.isIntersecting) }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+document.querySelectorAll('.screen[id]').forEach(function(el){ observer.observe(el) });
+
+/* Staggered card entrance */
+var cardObs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      var cards = e.target.querySelectorAll('.screen');
+      cards.forEach(function(c,i){ c.style.animationDelay = (i*0.03)+'s' });
+      cardObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.screens').forEach(function(el){ cardObs.observe(el) });
+</script>
+</body>
+</html>
