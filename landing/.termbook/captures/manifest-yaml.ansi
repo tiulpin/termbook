@@ -1,0 +1,65 @@
+title: eza — modern ls
+accent: "#3FB950"
+github: https://github.com/eza-community/eza
+width: 120
+categories:
+  - name: Listing
+    id: listing
+    screens:
+      - id: basic
+        title: default listing
+        command: eza corpus
+      - id: long
+        title: long form
+        command: eza corpus -l
+      - id: long-all
+        title: long with hidden
+        command: eza corpus -la
+      - id: header
+        title: with header row
+        command: eza corpus -l --header
+      - id: classify
+        title: classify markers
+        command: eza corpus --classify=always
+      - id: one-per-line
+        title: one per line
+        command: eza corpus -1 --color=always
+      - id: grid-long
+        title: grid sort
+        command: eza corpus -lx
+  - name: Sizes
+    id: sizes
+    screens:
+      - id: totals
+        title: human totals
+        command: eza corpus -lh --total-size
+      - id: by-size
+        title: sorted by size
+        command: eza corpus -lS
+      - id: by-time
+        title: sorted by time
+        command: eza corpus -l --sort=time --reverse
+      - id: rel-times
+        title: relative times
+        command: eza corpus -l --time-style=relative
+      - id: iso-times
+        title: ISO timestamps
+        command: eza corpus -l --time-style=long-iso
+  - name: Tree
+    id: tree
+    screens:
+      - id: tree
+        title: tree (level 2)
+        command: eza corpus/ --tree --level=2
+      - id: tree-gitignore
+        title: tree respecting .gitignore
+        command: eza corpus/ --tree --level=3 --git-ignore
+      - id: tree-long
+        title: long tree
+        command: eza corpus/ --tree --level=2 -l --no-permissions --no-user
+  - name: Git
+    id: git
+    screens:
+      - id: git-status
+        title: git status column
+        command: eza corpus -l --git --git-repos

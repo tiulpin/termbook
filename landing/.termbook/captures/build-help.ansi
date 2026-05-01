@@ -1,0 +1,9 @@
+Render gallery.html from the manifest and captures
+
+Usage:
+  termbook build [flags]
+
+Flags:
+  -h, --help            help for build
+      --only string     render only the screen with this id
+  -o, --output string   output HTML path (default "gallery.html")

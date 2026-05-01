@@ -1,0 +1,16 @@
+Beautiful, browsable reference pages for your CLI
+
+Usage:
+  termbook [command]
+
+Available Commands:
+  build       Render gallery.html from the manifest and captures
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  record      Capture a command's output and add it to the manifest
+
+Flags:
+  -h, --help      help for termbook
+  -v, --version   version for termbook
+
+Use "termbook [command] --help" for more information about a command.

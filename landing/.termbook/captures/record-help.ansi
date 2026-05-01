@@ -1,0 +1,18 @@
+Run a command in a PTY, capture its ANSI output, and upsert it into the
+manifest. The first invocation scaffolds .termbook/termbook.yml.
+
+With --only <id>, re-captures an existing entry's command and overwrites
+its capture file without changing the manifest.
+
+Usage:
+  termbook record [command...] [flags]
+
+Flags:
+      --cat string         category name (default "Screens")
+      --desc string        screen description
+  -h, --help               help for record
+      --id string          screen id (defaults to a slug of the command)
+      --only string        re-capture an existing entry by id without modifying the manifest
+      --timeout duration   per-command timeout (default 30s)
+      --title string       screen title (defaults to the command)
+      --width int          PTY columns (default: manifest width or 120)

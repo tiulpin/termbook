@@ -1,0 +1,47 @@
+title: termbook
+accent: "#7BB7E8"
+github: https://github.com/tiulpin/termbook
+width: 120
+
+kicker: v0.2 · open source · self-hosted
+intro: >
+  Generate browsable HTML galleries from CLI terminal output. Like Storybook,
+  but for command-line tools. Captures ANSI in a real PTY and renders it as
+  a static page with a sidebar nav, dark/light themes, and a fuzzy filter.
+
+facts:
+  - { value: "4", label: "live galleries" }
+  - { value: "0", label: "deps for users" }
+  - { value: "PTY", label: "real terminal capture" }
+
+notes:
+  title: live galleries
+  body: |
+    <p>
+      <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/bat/gallery.html">bat – cat with wings</a> ·
+      <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/eza/gallery.html">eza – modern ls</a> ·
+      <a href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/ripgrep/gallery.html">ripgrep – fast recursive search</a> ·
+      <a href="https://jetbrains.github.io/teamcity-cli/">teamcity cli</a>
+    </p>
+    <p class="mono-hint">
+      Each one was generated from the same two commands you'll use:
+      <span class="kbd">termbook record</span>
+      <span class="kbd">termbook build</span>.
+    </p>
+
+categories:
+  - name: CLI
+    id: cli
+    screens:
+      - id: help
+        title: termbook --help
+        command: termbook --help
+      - id: record-help
+        title: record
+        command: termbook record --help
+      - id: build-help
+        title: build
+        command: termbook build --help
+      - id: manifest-yaml
+        title: a real manifest
+        command: cat ../examples/eza/.termbook/termbook.yml
