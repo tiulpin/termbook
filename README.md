@@ -15,7 +15,74 @@ Captures ANSI-colored output and renders it as a static page with a grid layout,
 
 Manifests live under [`examples/`](examples/); each one is a `.termbook/termbook.yml` plus committed `*.ansi` captures.
 
-## Usage
+## Install
+
+```sh
+brew install tiulpin/tap/termbook
+# or
+go install github.com/tiulpin/termbook/cmd/termbook@latest
+```
+
+Linux and macOS. PTY capture uses `creack/pty`; Windows is not supported yet.
+
+## Quickstart
+
+```sh
+termbook record "kubectl get pods" --id get-pods --cat Pods
+termbook record "kubectl describe pod web-0" --id describe-pod --cat Pods
+termbook build
+```
+
+The first `record` scaffolds `.termbook/termbook.yml`. Captures land in `.termbook/captures/<id>.ansi`. Commit them or don't — `build` works either way, so a teammate without access to the tool you're documenting can still rebuild the page.
+
+## Manifest
+
+`.termbook/termbook.yml`:
+
+```yaml
+title: kubectl screens
+accent: "#326CE5"
+github: https://github.com/kubernetes/kubectl
+width: 120
+categories:
+  - name: Pods
+    id: pods
+    screens:
+      - id: get-pods
+        title: list pods
+        command: kubectl get pods
+      - id: describe-pod
+        title: pod details
+        command: kubectl describe pod web-0
+```
+
+`record` upserts entries by `id`. To edit titles, descriptions, or grouping, change the YAML directly and re-run `termbook record --only <id>` to refresh the capture.
+
+## Commands
+
+| Verb | Flags |
+|------|-------|
+| `record <cmd...>` | `--id`, `--cat`, `--title`, `--desc`, `--width` (default 120), `--timeout` (default 30s) |
+| `record --only <id>` | Re-capture an existing entry without touching the manifest |
+| `build` | `-o <path>` (default `gallery.html`), `--only <id>` to render a single screen |
+
+The PTY is started with `TERM=xterm-256color`, `COLORTERM=truecolor`, and a fixed `COLUMNS`, so tools that disable color outside a terminal still emit ANSI.
+
+## GitHub Action
+
+```yaml
+- uses: tiulpin/termbook@v0.2.0
+  with:
+    output: site/index.html
+- uses: actions/upload-pages-artifact@v3
+  with: { path: site }
+```
+
+The action installs the released binary and runs `build` against committed captures. To re-record commands in CI, run `termbook record --only <id>` for each entry before the action.
+
+## Library API
+
+For programmatic capture in Go:
 
 ```go
 book := termbook.New("mycli — screen gallery",
@@ -30,7 +97,7 @@ book.Category("Users", "users",
 book.Generate("docs/gallery/index.html")
 ```
 
-`Scr` takes an ANSI string — capture it however you want. There's also `Manual` for building output with a writer:
+`Scr` takes an ANSI string. `Manual` takes a writer:
 
 ```go
 termbook.Manual("login", "login", "Auth flow", "mycli login", func(w io.Writer) {
@@ -38,44 +105,15 @@ termbook.Manual("login", "login", "Auth flow", "mycli login", func(w io.Writer) 
 })
 ```
 
-## Capture helper for Cobra
+Options:
 
 ```go
-func capture(rootCmd *cobra.Command, args ...string) string {
-    var buf bytes.Buffer
-    rootCmd.SetArgs(args)
-    rootCmd.SetOut(&buf)
-    rootCmd.SetErr(&buf)
-    rootCmd.Execute()
-    return buf.String()
-}
-```
-
-## Options
-
-```go
-// Branding
-termbook.WithGitHub("https://github.com/...")          // star link in header
-termbook.WithIntro("Generated from real output")       // intro text below header
-
-// Appearance
-termbook.WithAccent("#FF6B6B")                         // accent color (both themes)
-termbook.WithDefaultTheme("light")                     // "dark" (default) or "light"
-termbook.WithFont("Fira Code",                         // custom monospace font
-    "https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap")
-termbook.WithColumns(2)                                // grid columns (default 3)
-
-// Advanced
-termbook.WithCSS(".terminal pre { font-size: 14px }")  // inject extra CSS
-termbook.WithTemplate(myHTML)                          // replace entire template
-```
-
-Zero config works out of the box. Each option layers on independently.
-
-## Install
-
-```
-go get github.com/tiulpin/termbook
+termbook.WithGitHub("https://github.com/...")
+termbook.WithAccent("#FF6B6B")
+termbook.WithDefaultTheme("light")               // default "dark"
+termbook.WithFont("Fira Code", "https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap")
+termbook.WithCSS(".terminal pre { font-size: 14px }")
+termbook.WithTemplate(myHTML)
 ```
 
 ## See also
