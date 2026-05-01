@@ -1,0 +1,42 @@
+[0m[35mcorpus/action.yml[0m
+[0m[32m2[0m:description: Build a termbook gallery from a committed [0m[1m[31mmanifest[0m and captures.
+
+[0m[35mcorpus/PLAN.md[0m
+[0m[32m35[0m:| `record <cmd...>` | PTY-capture, save `<id>.ansi`, upsert [0m[1m[31mmanifest[0m. Creates `.termbook/termbook.yml` on first call. | `--id`, `--cat`, `--title`, `--desc`, `--width` (120), `--timeout` (30s) |
+[0m[32m36[0m:| `build` | Read [0m[1m[31mmanifest[0m + captures, render gallery.html via library. | `-o <path>`, `--only <id>` (re-render single screen against existing capture set) |
+[0m[32m38[0m:`--only <id>` on **record** re-captures one screen by id (no [0m[1m[31mmanifest[0m changes). On **build** it filters which screens are emitted — useful for fast preview cycles.
+[0m[32m42[0m:## [0m[1m[31mManifest[0m
+[0m[32m81[0m:- `tiulpin/termbook-examples` — four [0m[1m[31mmanifest[0ms, four CI workflows, deploys to Pages
+[0m[32m91[0m:- [ ] `cmd/termbook/build.go` — read [0m[1m[31mmanifest[0m, read captures, call library, write HTML; `--only` filter
+[0m[32m102[0m:- [ ] Composite GitHub Action at `.github/actions/termbook/action.yml`: inputs (`[0m[1m[31mmanifest[0m-path`, `output`), steps (download release binary, run record for each entry, run build, upload artifact). No diff yet — that's v0.3.
+
+[0m[35mcorpus/internal/config/config.go[0m
+[0m[32m15[0m:	[0m[1m[31mManifest[0mFile = "termbook.yml"
+[0m[32m19[0m:func [0m[1m[31mManifest[0mPath(workdir string) string {
+[0m[32m20[0m:	return filepath.Join(workdir, Dir, [0m[1m[31mManifest[0mFile)
+[0m[32m27[0m:type [0m[1m[31mManifest[0m struct {
+[0m[32m49[0m:func Load(path string) (*[0m[1m[31mManifest[0m, error) {
+[0m[32m54[0m:	var m [0m[1m[31mManifest[0m
+[0m[32m61[0m:func (m *[0m[1m[31mManifest[0m) Save(path string) error {
+[0m[32m67[0m:		return fmt.Errorf("marshal [0m[1m[31mmanifest[0m: %w", err)
+[0m[32m72[0m:func (m *[0m[1m[31mManifest[0m) UpsertScreen(catName string, s Screen) {
+[0m[32m95[0m:func (m *[0m[1m[31mManifest[0m) FindScreen(id string) *Screen {
+[0m[32m144[0m:func LoadOrInit(path, defaultTitle string) (*[0m[1m[31mManifest[0m, bool, error) {
+[0m[32m152[0m:	return &[0m[1m[31mManifest[0m{Title: defaultTitle}, true, nil
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m30[0m:		Short: "Capture a command's output and add it to the [0m[1m[31mmanifest[0m",
+[0m[32m32[0m:[0m[1m[31mmanifest[0m. The first invocation scaffolds .termbook/termbook.yml.
+[0m[32m35[0m:its capture file without changing the [0m[1m[31mmanifest[0m.`,
+[0m[32m49[0m:			[0m[1m[31mmanifest[0mPath := config.[0m[1m[31mManifest[0mPath(workdir)
+[0m[32m51[0m:			m, _, err := config.LoadOrInit([0m[1m[31mmanifest[0mPath, defaultTitle)
+[0m[32m60[0m:					return fmt.Errorf("no screen with id %q in %s", only, [0m[1m[31mmanifest[0mPath)
+[0m[32m104[0m:				if err := m.Save([0m[1m[31mmanifest[0mPath); err != nil {
+[0m[32m122[0m:	cmd.Flags().IntVar(&width, "width", 0, "PTY columns (default: [0m[1m[31mmanifest[0m width or 120)")
+[0m[32m124[0m:	cmd.Flags().StringVar(&only, "only", "", "re-capture an existing entry by id without modifying the [0m[1m[31mmanifest[0m")
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m21[0m:		Short: "Render gallery.html from the [0m[1m[31mmanifest[0m and captures",
+[0m[32m28[0m:			[0m[1m[31mmanifest[0mPath := config.[0m[1m[31mManifest[0mPath(workdir)
+[0m[32m29[0m:			m, err := config.Load([0m[1m[31mmanifest[0mPath)
+[0m[32m32[0m:					return fmt.Errorf("no [0m[1m[31mmanifest[0m at %s — run `termbook record` first", [0m[1m[31mmanifest[0mPath)

@@ -1,0 +1,24 @@
+[1;36mcorpus[0m
+[1;90m├── [0maction.yml
+[1;90m├── [36mcmd[0m
+[1;90m│   └── [36mtermbook[0m
+[1;90m│       ├── [33mbuild.go[0m
+[1;90m│       ├── [33mmain.go[0m
+[1;90m│       └── [33mrecord.go[0m
+[1;90m├── [36mexamples[0m
+[1;90m│   ├── [36meza[0m
+[1;90m│   │   └── [0m[35mcorpus[0m [1;90m->[0m [36m../[1m..[0m
+[1;90m│   └── [36mripgrep[0m
+[1;90m│       └── [0m[35mcorpus[0m [1;90m->[0m [36m../[1m..[0m
+[1;90m├── [0mgallery.html
+[1;90m├── [0mgo.mod
+[1;90m├── [0mgo.sum
+[1;90m├── [36minternal[0m
+[1;90m│   ├── [36mcapture[0m
+[1;90m│   │   └── [33mcapture.go[0m
+[1;90m│   └── [36mconfig[0m
+[1;90m│       └── [33mconfig.go[0m
+[1;90m├── [0mLICENSE
+[1;90m├── [0mPLAN.md
+[1;90m├── [4;33mREADME.md[0m
+[1;90m└── [33mtermbook.go[0m

@@ -1,0 +1,39 @@
+[0m[35mcorpus/termbook.go[0m
+[0m[32m159[0m:[0m[1m[31mfunc WithGitHub([0murl string) Option {
+[0m[32m166[0m:[0m[1m[31mfunc WithAccent([0mhex string) Option {
+[0m[32m172[0m:[0m[1m[31mfunc WithFont([0mname, cssURL string) Option {
+[0m[32m178[0m:[0m[1m[31mfunc WithSans([0mname, cssURL string) Option {
+[0m[32m185[0m:[0m[1m[31mfunc WithIntro([0mtext string) Option {
+[0m[32m190[0m:[0m[1m[31mfunc WithDefaultTheme([0mtheme string) Option {
+[0m[32m199[0m:[0m[1m[31mfunc WithColumns([0mint) Option { return func(*options) {} }
+[0m[32m205[0m:[0m[1m[31mfunc WithCSS([0mcss string) Option {
+[0m[32m212[0m:[0m[1m[31mfunc WithTemplate([0mhtml string) Option {
+[0m[32m222[0m:[0m[1m[31mfunc WithDecor([0md Decor) Option {
+[0m[32m227[0m:[0m[1m[31mfunc New([0mtitle string, opts ...Option) *Book {
+[0m[32m247[0m:[0m[1m[31mfunc Scr([0mid, title, desc, command, ansiOutput string) Screen {
+[0m[32m258[0m:[0m[1m[31mfunc Manual([0mid, title, desc, command string, fn func(w io.Writer)) Screen {
+[0m[32m308[0m:[0m[1m[31mfunc normalizeScreens([0mcats []Category) []Category {
+
+[0m[35mcorpus/internal/config/config.go[0m
+[0m[32m19[0m:[0m[1m[31mfunc ManifestPath([0mworkdir string) string {
+[0m[32m23[0m:[0m[1m[31mfunc CapturePath([0mworkdir, id string) string {
+[0m[32m49[0m:[0m[1m[31mfunc Load([0mpath string) (*Manifest, error) {
+[0m[32m107[0m:[0m[1m[31mfunc mergeScreen([0mexisting, incoming Screen) Screen {
+[0m[32m120[0m:[0m[1m[31mfunc DeriveID([0mcommand string) string {
+[0m[32m124[0m:[0m[1m[31mfunc slugify([0ms string) string {
+[0m[32m144[0m:[0m[1m[31mfunc LoadOrInit([0mpath, defaultTitle string) (*Manifest, bool, error) {
+
+[0m[35mcorpus/internal/capture/capture.go[0m
+[0m[32m28[0m:[0m[1m[31mfunc Run([0mctx context.Context, argv []string, opts Options) (*Result, error) {
+[0m[32m90[0m:[0m[1m[31mfunc isExpectedReadErr([0merr error) bool {
+
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m12[0m:[0m[1m[31mfunc main([0m) {
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m18[0m:[0m[1m[31mfunc newRecordCmd([0m) *cobra.Command {
+[0m[32m128[0m:[0m[1m[31mfunc firstNonEmpty([0ms ...string) string {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m14[0m:[0m[1m[31mfunc newBuildCmd([0m) *cobra.Command {
+[0m[32m96[0m:[0m[1m[31mfunc s2id([0ms string) string {

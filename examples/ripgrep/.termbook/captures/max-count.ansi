@@ -1,0 +1,33 @@
+[0m[35mcorpus/termbook.go[0m
+[0m[32m62[0m:[0m[1m[31mfunc[0m (s Screen) SearchKey() string {
+[0m[32m94[0m:// Option [0m[1m[31mfunc[0mtions, which keeps the library's API surface small.
+
+[0m[35mcorpus/gallery.html[0m
+[0m[32m665[0m:([0m[1m[31mfunc[0mtion(){
+[0m[32m671[0m:  [0m[1m[31mfunc[0mtion sync(){
+
+[0m[35mcorpus/README.md[0m
+[0m[32m28[0m:termbook.Manual("login", "login", "Auth flow", "mycli login", [0m[1m[31mfunc[0m(w io.Writer) {
+[0m[32m36[0m:[0m[1m[31mfunc[0m capture(rootCmd *cobra.Command, args ...string) string {
+
+[0m[35mcorpus/internal/config/config.go[0m
+[0m[32m19[0m:[0m[1m[31mfunc[0m ManifestPath(workdir string) string {
+[0m[32m23[0m:[0m[1m[31mfunc[0m CapturePath(workdir, id string) string {
+
+[0m[35mcorpus/internal/capture/capture.go[0m
+[0m[32m28[0m:[0m[1m[31mfunc[0m Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+[0m[32m90[0m:[0m[1m[31mfunc[0m isExpectedReadErr(err error) bool {
+
+[0m[35mcorpus/LICENSE[0m
+[0m[32m161[0m:      work stoppage, computer failure or mal[0m[1m[31mfunc[0mtion, or any and all
+
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m12[0m:[0m[1m[31mfunc[0m main() {
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m18[0m:[0m[1m[31mfunc[0m newRecordCmd() *cobra.Command {
+[0m[32m37[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, args []string) error {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m14[0m:[0m[1m[31mfunc[0m newBuildCmd() *cobra.Command {
+[0m[32m23[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, _ []string) error {

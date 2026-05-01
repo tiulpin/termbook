@@ -1,0 +1,6 @@
+[0m[35mcorpus/termbook.go[0m
+[0m[32m226[0m-// New creates a new gallery book with the given title.
+[0m[32m227[0m:[0m[1m[31mfunc New[0m(title string, opts ...Option) *Book {
+[0m[32m228[0m-	b := &Book{title: title}
+[0m[32m229[0m-	for _, o := range opts {
+[0m[32m230[0m-		o(&b.opts)

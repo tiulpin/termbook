@@ -1,0 +1,12 @@
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m12[0m:[0m[1m[31mfunc[0m main() {
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m18[0m:[0m[1m[31mfunc[0m newRecordCmd() *cobra.Command {
+[0m[32m37[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, args []string) error {
+[0m[32m128[0m:[0m[1m[31mfunc[0m firstNonEmpty(s ...string) string {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m14[0m:[0m[1m[31mfunc[0m newBuildCmd() *cobra.Command {
+[0m[32m23[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, _ []string) error {
+[0m[32m96[0m:[0m[1m[31mfunc[0m s2id(s string) string {

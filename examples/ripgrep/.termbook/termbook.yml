@@ -1,0 +1,62 @@
+title: ripgrep — fast recursive search
+accent: "#E94B3C"
+github: https://github.com/BurntSushi/ripgrep
+width: 120
+categories:
+  - name: Search
+    id: search
+    screens:
+      - id: basic
+        title: match a literal
+        command: rg func corpus/
+      - id: regex-go
+        title: regex, Go files
+        command: rg --type=go --pretty 'func \w+\(' corpus/
+      - id: case-insensitive
+        title: case insensitive
+        command: rg -i 'manifest' corpus/
+      - id: word-boundary
+        title: whole-word match
+        command: rg -w func corpus/
+  - name: Refine
+    id: refine
+    screens:
+      - id: context
+        title: context lines
+        command: rg --type=go --context=2 'cobra.Command' corpus/
+      - id: before-after
+        title: before / after
+        command: rg --type=go -B 1 -A 3 'func New' corpus/
+      - id: max-count
+        title: limit per file
+        command: rg --max-count=2 'func' corpus/
+      - id: multi-pattern
+        title: multiple patterns
+        command: rg -e 'func New' -e 'func Run' corpus/
+  - name: Listings
+    id: listings
+    screens:
+      - id: files-with-matches
+        title: files with matches
+        command: rg -l Manifest corpus/
+      - id: count-per-file
+        title: count per file
+        command: rg -c func corpus/
+      - id: files
+        title: all .go files
+        command: rg --files --type=go corpus/
+      - id: stats
+        title: match stats
+        command: rg --stats func corpus/
+  - name: Output
+    id: output
+    screens:
+      - id: replace
+        title: preview replacement
+        command: rg --replace '«$0»' 'func \w+' corpus/cmd/
+      - id: json
+        title: JSON output
+        command: rg --json --max-count=1 'func New' corpus/
+      - id: heading
+        title: with file headings
+        command: rg --color=always --heading 'func' corpus/cmd/

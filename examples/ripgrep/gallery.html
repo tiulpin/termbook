@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ripgrep — fast recursive search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains&#43;Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+:root, [data-theme="dark"] {
+  --bg: #0b0d10; --bg-1: #111419; --bg-2: #161a20; --bg-3: #1c2128;
+  --line: #242a33; --line-2: #2f3742;
+  --fg: #e6e8eb; --fg-2: #b6bcc5; --fg-3: #7d8693; --fg-4: #4a525d;
+  --green:  oklch(0.78 0.14 150);
+  --red:    oklch(0.72 0.17 25);
+  --yellow: oklch(0.82 0.15 85);
+  --cyan:   oklch(0.80 0.12 210);
+  --blue:   oklch(0.74 0.14 240);
+  --magenta:oklch(0.74 0.15 330);
+  --accent: oklch(0.82 0.15 85);
+}
+[data-theme="light"] {
+  --bg: #f6f5f1; --bg-1: #ffffff; --bg-2: #ecebe6; --bg-3: #e1dfd8;
+  --line: #d6d4cc; --line-2: #bcb9ae;
+  --fg: #17191c; --fg-2: #2e3238; --fg-3: #5a6069; --fg-4: #8e949d;
+  --green:  oklch(0.55 0.16 145);
+  --red:    oklch(0.55 0.20 25);
+  --yellow: oklch(0.58 0.16 75);
+  --cyan:   oklch(0.52 0.13 220);
+  --blue:   oklch(0.48 0.17 250);
+  --magenta:oklch(0.50 0.18 330);
+  --accent: oklch(0.55 0.16 75);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+ 
+.page {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+@media (min-width: 1441px) {
+  .page { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+}
+
+ 
+.side {
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  position: sticky; top: 0;
+  height: 100vh; overflow-y: auto;
+  padding: 28px 22px 40px;
+   
+  scrollbar-width: none;
+}
+.side::-webkit-scrollbar { display: none; }
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.brand-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 13px; letter-spacing: 0.01em;
+}
+.brand-ver {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); margin-left: auto;
+}
+.nav-toggle {
+  display: none;
+  align-items: center; gap: 6px;
+  margin-left: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.nav-toggle:hover { color: var(--fg); border-color: var(--line-2); }
+.nav-toggle-icon { font-size: 13px; line-height: 1; }
+
+.sidebar-meta {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px;
+}
+
+.search { position: relative; margin-bottom: 16px; }
+.search input {
+  width: 100%;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono); font-size: 12px;
+  padding: 8px 10px 8px 28px;
+  border-radius: 6px; outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+.search::before {
+  content: "/"; position: absolute;
+  left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--fg-4); font-family: var(--mono); font-size: 12px;
+}
+.search .clear-k {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 10px; color: var(--fg-4);
+}
+
+.side-nav { list-style: none; padding: 0; margin: 0; }
+.side-nav .grp { margin-top: 14px; }
+.side-nav .grp-title {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-2); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.side-nav .grp-title .count { color: var(--fg-4); font-weight: 400; margin-left: auto; }
+.side-nav a {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--fg-3);
+  text-decoration: none;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.side-nav a .dot { color: var(--fg-4); font-size: 10px; }
+.side-nav a:hover { color: var(--fg); }
+.side-nav a.active { color: var(--accent); }
+.side-nav a.hidden { display: none; }
+
+.side-foot {
+  margin-top: 28px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); line-height: 1.6;
+}
+.side-foot a { color: var(--fg-3); text-decoration: none; }
+.side-foot a:hover { color: var(--fg); }
+
+ 
+.main { padding: 36px 56px 80px; max-width: 1040px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 20px; border-bottom: 1px solid var(--line);
+  margin-bottom: 32px;
+}
+.crumbs { font-family: var(--mono); font-size: 11.5px; color: var(--fg-3); }
+.crumbs .sep { color: var(--fg-4); margin: 0 6px; }
+.crumbs .here { color: var(--fg); }
+
+.theme-toggle {
+  display: inline-flex; border: 1px solid var(--line);
+  border-radius: 999px; overflow: hidden;
+  background: var(--bg-1);
+  font-family: var(--mono); font-size: 10.5px;
+}
+.theme-toggle button {
+  all: unset; cursor: pointer;
+  padding: 5px 12px; color: var(--fg-3);
+}
+.theme-toggle button.active { background: var(--fg); color: var(--bg); }
+[data-theme="light"] .theme-toggle button.active { color: var(--bg-1); }
+
+ 
+.mast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px; align-items: end;
+  margin-bottom: 40px;
+  position: relative;
+}
+.mast h1 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 48px; line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px; color: var(--fg);
+}
+.mast h1 .slash { color: var(--accent); }
+.mast p.kicker {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.14em;
+  margin: 0 0 20px;
+}
+.mast p.lede {
+  font-family: var(--sans);
+  font-size: 16px; line-height: 1.55;
+  color: var(--fg-2);
+  margin: 0; max-width: 560px;
+  text-wrap: pretty;
+}
+.mast .fact {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); text-align: right;
+  line-height: 1.6;
+}
+.mast .fact b { color: var(--fg-2); font-weight: 500; }
+.mast::before {
+  content: "";
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+   
+  background: var(--bloom, radial-gradient(closest-side,
+      color-mix(in srgb, var(--accent) 32%, transparent),
+      color-mix(in srgb, var(--accent) 14%, transparent) 45%,
+      transparent 72%));
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: 0;
+}
+.mast > * { position: relative; z-index: 1; }
+
+ 
+.section { margin-bottom: 72px; }
+.section-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.section-num {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); letter-spacing: 0.1em;
+}
+.section-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 24px; letter-spacing: -0.01em; color: var(--fg);
+}
+.section-blurb {
+  font-family: var(--sans); font-size: 13px;
+  color: var(--fg-3);
+  max-width: 440px; text-align: right; justify-self: end;
+}
+.section.empty { display: none; }
+
+ 
+.entry {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 28px;
+  padding: 24px 0 36px;
+  border-top: 1px dashed var(--line);
+}
+.entry-term { min-width: 0; }  
+.entry:first-child { border-top: 0; padding-top: 8px; }
+.entry-meta .id {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.entry-meta h4 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 15px; line-height: 1.25;
+  color: var(--fg); margin: 0 0 8px;
+}
+.entry-meta p {
+  font-family: var(--sans); font-size: 12.5px;
+  line-height: 1.55; color: var(--fg-3);
+  margin: 0 0 10px; text-wrap: pretty;
+}
+.entry-meta .tags {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--fg-4);
+}
+.entry-meta .tags span {
+  padding: 2px 6px; border: 1px solid var(--line); border-radius: 3px;
+}
+.entry.hidden { display: none; }
+
+.experimental-pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 3px;
+  padding: 0 5px; margin-left: 6px; vertical-align: 2px;
+}
+
+ 
+.term {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+  color: var(--fg);
+  overflow: hidden;
+  position: relative;
+}
+.term-head {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 11.5px; color: var(--fg-3);
+  letter-spacing: 0.02em;
+}
+.term-dots { display: inline-flex; gap: 6px; }
+.term-dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line-2); display: inline-block;
+}
+.term-dots i:nth-child(1) { background: oklch(0.70 0.14 25); }
+.term-dots i:nth-child(2) { background: oklch(0.80 0.13 85); }
+.term-dots i:nth-child(3) { background: oklch(0.75 0.13 150); }
+.term-title {
+  flex: 1; text-align: center;
+  font-size: 11px; color: var(--fg-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.term-head-pad { width: 42px; }
+.term-prompt {
+  padding: 12px 16px 8px;
+  font-size: 12.5px;
+  color: var(--fg-3);
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 10px;
+}
+.term-prompt .p { color: var(--green); }
+.term-prompt .cmd { color: var(--fg); }
+.term-body {
+  padding: 4px 16px 16px;
+  font-size: 12.5px; line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0;
+}
+.term-body.no-prompt { padding-top: 14px; }
+
+ 
+.term-bold { font-weight: 600; }
+.term-fg2, .term-dim { color: var(--fg-3); }
+.term-italic { font-style: italic; }
+.term-underline { text-decoration: underline; }
+.term-fg30 { color: var(--fg-4); }
+.term-fg31 { color: var(--red); }
+.term-fg32 { color: var(--green); }
+.term-fg33 { color: var(--yellow); }
+.term-fg34 { color: var(--blue); }
+.term-fg35 { color: var(--magenta); }
+.term-fg36 { color: var(--cyan); }
+.term-fg37 { color: var(--fg-2); }
+.term-fg90 { color: var(--fg-3); }
+.term-fg91 { color: var(--red); }
+.term-fg92 { color: var(--green); }
+.term-fg93 { color: var(--yellow); }
+.term-fg94 { color: var(--blue); }
+.term-fg95 { color: var(--magenta); }
+.term-fg96 { color: var(--cyan); }
+.term-fg97 { color: var(--fg); }
+.term-bg40 { background: var(--fg-4); }
+.term-bg41 { background: var(--red); color: var(--bg); }
+.term-bg42 { background: var(--green); color: var(--bg); }
+.term-bg43 { background: var(--yellow); color: var(--bg); }
+.term-bg44 { background: var(--blue); color: var(--bg); }
+.term-bg45 { background: var(--magenta); color: var(--bg); }
+.term-bg46 { background: var(--cyan); color: var(--bg); }
+.term-bg47 { background: var(--fg-2); color: var(--bg); }
+
+ 
+.notes-panel {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  background: color-mix(in oklch, var(--accent) 6%, var(--bg-1));
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 60px;
+}
+[data-theme="light"] .notes-panel {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-1));
+}
+.notes-panel h3 {
+  font-family: var(--mono); font-size: 11px;
+  margin: 0 0 8px;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--accent);
+}
+.notes-panel p {
+  font-family: var(--sans); font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin: 0 0 8px;
+  max-width: 660px;
+  text-wrap: pretty;
+}
+.notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel .mono-hint {
+  font-family: var(--mono); font-size: 11px; color: var(--fg-3);
+}
+.notes-panel .kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+ 
+.foot {
+  margin-top: 60px; padding-top: 24px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
+}
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.attrib {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 0 0;
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-3);
+  flex-wrap: wrap;
+}
+.attrib .dot { color: var(--fg-4); }
+
+ 
+@media (max-width: 1100px) {
+  .page { grid-template-columns: 240px 1fr; }
+  .side { padding: 22px 16px 32px; }
+  .main { padding: 32px 36px 60px; }
+  .mast h1 { font-size: 42px; }
+  .entry { grid-template-columns: 160px 1fr; gap: 22px; }
+}
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; }
+  .side {
+    position: sticky; top: 0; z-index: 15;
+    height: auto;
+    border-right: 0; border-bottom: 1px solid var(--line);
+    padding: 14px 20px 16px;
+    background: var(--bg);
+  }
+  .side-foot { margin-top: 18px; }
+
+   
+  .nav-toggle { display: inline-flex; }
+  .side .side-nav,
+  .side .side-foot { display: none; }
+  .side.nav-open .side-nav { display: block; }
+  .side.nav-open .side-foot { display: block; }
+  .side.nav-open { max-height: 85vh; overflow-y: auto; }
+  .brand { margin-bottom: 12px; }
+  .sidebar-meta { margin-bottom: 10px; }
+  .search { margin-bottom: 0; }
+  .side.nav-open .search { margin-bottom: 14px; }
+  .main { padding: 28px 24px 60px; }
+  .entry { grid-template-columns: 1fr; gap: 14px; padding: 20px 0 28px; }
+  .mast { grid-template-columns: 1fr; gap: 22px; }
+  .mast .fact { text-align: left; }
+  .mast h1 { font-size: 34px; }
+  .mast p.lede { font-size: 15px; }
+  .section-head { grid-template-columns: 1fr; gap: 10px; }
+  .section-blurb { text-align: left; justify-self: start; max-width: none; }
+  .section { margin-bottom: 56px; }
+}
+
+@media (max-width: 600px) {
+  .main { padding: 20px 18px 48px; }
+  .side { padding: 14px 18px 18px; }
+  .brand-name { font-size: 12.5px; }
+  .topbar { flex-wrap: wrap; gap: 10px; padding-bottom: 14px; margin-bottom: 22px; }
+  .crumbs { font-size: 11px; }
+  .theme-toggle button { padding: 7px 14px; font-size: 11px; }
+   
+  .search input { font-size: 16px; padding: 10px 12px 10px 30px; }
+  .search::before { font-size: 14px; }
+  .mast { margin-bottom: 32px; gap: 16px; }
+  .mast h1 { font-size: 28px; letter-spacing: -0.01em; }
+  .mast p.kicker { font-size: 10.5px; margin-bottom: 14px; }
+  .mast p.lede { font-size: 14px; padding-left: 12px; }
+  .mast::before { display: none; }
+  .notes-panel { padding: 14px 16px; margin-bottom: 36px; }
+  .notes-panel p { font-size: 12.5px; }
+  .section { margin-bottom: 44px; }
+  .section-name { font-size: 20px; }
+  .section-head { padding-bottom: 10px; margin-bottom: 18px; }
+  .entry { padding: 16px 0 22px; gap: 10px; }
+  .entry-meta h4 { font-size: 14px; }
+  .entry-meta .id { margin-bottom: 4px; }
+  .entry-meta p { font-size: 12px; }
+  .term { border-radius: 8px; }
+  .term-head { gap: 8px; padding: 8px 12px; font-size: 11px; }
+  .term-head-pad { display: none; }
+  .term-title { font-size: 10.5px; }
+  .term-prompt { padding: 10px 12px 6px; font-size: 12px; }
+  .term-body { font-size: 12px; padding: 4px 12px 14px; }
+  .foot { flex-direction: column; gap: 6px; align-items: flex-start; }
+  .attrib { flex-wrap: wrap; gap: 8px; font-size: 10.5px; padding: 14px 0 0; margin-top: 22px; }
+}
+
+@media (max-width: 420px) {
+  .mast h1 { font-size: 24px; line-height: 1.08; }
+  .section-name { font-size: 18px; }
+  .term-body { font-size: 11.5px; padding: 4px 10px 12px; }
+  .term-prompt { padding: 8px 10px 6px; font-size: 11.5px; }
+  .term-head { padding: 7px 10px; }
+  .entry-meta .tags { gap: 3px; }
+}
+
+ 
+:root,[data-theme="dark"]{--accent:#E94B3C}
+[data-theme="light"]{--accent:#E94B3C}
+
+
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="side" id="side">
+    <div class="brand">
+      
+      <div class="brand-name">ripgrep — fast recursive search</div>
+      
+      <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
+        <span class="nav-toggle-icon" aria-hidden="true">☰</span>
+        <span class="nav-toggle-label">menu</span>
+      </button>
+    </div>
+
+    <div class="sidebar-meta">15 screens · 2026-05-01 18:39</div>
+
+    <div class="search">
+      <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
+      <span class="clear-k">/</span>
+    </div>
+
+    <ul class="side-nav" id="sideNav">
+      <li class="grp" data-grp="search">
+        <div class="grp-title"><span>Search</span><span class="count">4</span></div>
+        <a href="#basic" data-cmd="basic" data-search="basic match a literal  rg func corpus/">
+          <span class="dot">·</span><span>match a literal</span>
+        </a>
+        <a href="#regex-go" data-cmd="regex-go" data-search="regex-go regex, go files  rg --type=go --pretty &#39;func \w&#43;\(&#39; corpus/">
+          <span class="dot">·</span><span>regex, Go files</span>
+        </a>
+        <a href="#case-insensitive" data-cmd="case-insensitive" data-search="case-insensitive case insensitive  rg -i &#39;manifest&#39; corpus/">
+          <span class="dot">·</span><span>case insensitive</span>
+        </a>
+        <a href="#word-boundary" data-cmd="word-boundary" data-search="word-boundary whole-word match  rg -w func corpus/">
+          <span class="dot">·</span><span>whole-word match</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="refine">
+        <div class="grp-title"><span>Refine</span><span class="count">4</span></div>
+        <a href="#context" data-cmd="context" data-search="context context lines  rg --type=go --context=2 &#39;cobra.command&#39; corpus/">
+          <span class="dot">·</span><span>context lines</span>
+        </a>
+        <a href="#before-after" data-cmd="before-after" data-search="before-after before / after  rg --type=go -b 1 -a 3 &#39;func new&#39; corpus/">
+          <span class="dot">·</span><span>before / after</span>
+        </a>
+        <a href="#max-count" data-cmd="max-count" data-search="max-count limit per file  rg --max-count=2 &#39;func&#39; corpus/">
+          <span class="dot">·</span><span>limit per file</span>
+        </a>
+        <a href="#multi-pattern" data-cmd="multi-pattern" data-search="multi-pattern multiple patterns  rg -e &#39;func new&#39; -e &#39;func run&#39; corpus/">
+          <span class="dot">·</span><span>multiple patterns</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="listings">
+        <div class="grp-title"><span>Listings</span><span class="count">4</span></div>
+        <a href="#files-with-matches" data-cmd="files-with-matches" data-search="files-with-matches files with matches  rg -l manifest corpus/">
+          <span class="dot">·</span><span>files with matches</span>
+        </a>
+        <a href="#count-per-file" data-cmd="count-per-file" data-search="count-per-file count per file  rg -c func corpus/">
+          <span class="dot">·</span><span>count per file</span>
+        </a>
+        <a href="#files" data-cmd="files" data-search="files all .go files  rg --files --type=go corpus/">
+          <span class="dot">·</span><span>all .go files</span>
+        </a>
+        <a href="#stats" data-cmd="stats" data-search="stats match stats  rg --stats func corpus/">
+          <span class="dot">·</span><span>match stats</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="output">
+        <div class="grp-title"><span>Output</span><span class="count">3</span></div>
+        <a href="#replace" data-cmd="replace" data-search="replace preview replacement  rg --replace &#39;«$0»&#39; &#39;func \w&#43;&#39; corpus/cmd/">
+          <span class="dot">·</span><span>preview replacement</span>
+        </a>
+        <a href="#json" data-cmd="json" data-search="json json output  rg --json --max-count=1 &#39;func new&#39; corpus/">
+          <span class="dot">·</span><span>JSON output</span>
+        </a>
+        <a href="#heading" data-cmd="heading" data-search="heading with file headings  rg --color=always --heading &#39;func&#39; corpus/cmd/">
+          <span class="dot">·</span><span>with file headings</span>
+        </a>
+        
+      </li>
+      
+    </ul>
+
+    <div class="side-foot">
+      <a href="https://github.com/BurntSushi/ripgrep" target="_blank" rel="noopener">↗ github</a><br>
+      15 screens · 4 groups<br>
+      generated 2026-05-01 18:39
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        <span>ripgrep — fast recursive search</span><span class="sep">/</span><span class="here">gallery</span>
+      </div>
+      <div class="theme-toggle" role="tablist" aria-label="Theme">
+        <button id="tDark" class="active" aria-pressed="true">dark</button>
+        <button id="tLight" aria-pressed="false">light</button>
+      </div>
+    </header>
+
+    <section class="mast">
+      <div>
+        
+        <h1><span class="slash">/</span> ripgrep — fast recursive search</h1>
+        
+      </div>
+      
+    </section>
+
+    
+
+    <div>
+      <section class="section" id="section-search" data-grp="search">
+        <div class="section-head">
+          <div class="section-num">§ 01</div>
+          <div class="section-name">Search</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="basic" data-cmd="basic" data-search="basic match a literal  rg func corpus/">
+            <div class="entry-meta">
+              <div class="id">basic</div>
+              <h4>match a literal</h4>
+              
+              <div class="tags"><span>search</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg func corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg func corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">62</span>:<span class="term-fg31 term-fg1">func</span> (s Screen) SearchKey() string {
+<span class="term-fg32">94</span>:&#47;&#47; Option <span class="term-fg31 term-fg1">func</span>tions, which keeps the library&#39;s API surface small.
+<span class="term-fg32">156</span>:type Option <span class="term-fg31 term-fg1">func</span>(*options)
+<span class="term-fg32">159</span>:<span class="term-fg31 term-fg1">func</span> WithGitHub(url string) Option {
+<span class="term-fg32">160</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.githubURL = url }
+<span class="term-fg32">166</span>:<span class="term-fg31 term-fg1">func</span> WithAccent(hex string) Option {
+<span class="term-fg32">167</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.accent = hex }
+<span class="term-fg32">172</span>:<span class="term-fg31 term-fg1">func</span> WithFont(name, cssURL string) Option {
+<span class="term-fg32">173</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.fontName = name; o.fontURL = cssURL }
+<span class="term-fg32">178</span>:<span class="term-fg31 term-fg1">func</span> WithSans(name, cssURL string) Option {
+<span class="term-fg32">179</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.sansFontName = name; o.sansFontURL = cssURL }
+<span class="term-fg32">185</span>:<span class="term-fg31 term-fg1">func</span> WithIntro(text string) Option {
+<span class="term-fg32">186</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor.Lede = text }
+<span class="term-fg32">190</span>:<span class="term-fg31 term-fg1">func</span> WithDefaultTheme(theme string) Option {
+<span class="term-fg32">191</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.defaultTheme = theme }
+<span class="term-fg32">199</span>:<span class="term-fg31 term-fg1">func</span> WithColumns(int) Option { return <span class="term-fg31 term-fg1">func</span>(*options) {} }
+<span class="term-fg32">205</span>:<span class="term-fg31 term-fg1">func</span> WithCSS(css string) Option {
+<span class="term-fg32">206</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.customCSS = css }
+<span class="term-fg32">212</span>:<span class="term-fg31 term-fg1">func</span> WithTemplate(html string) Option {
+<span class="term-fg32">213</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.templateHTML = html }
+<span class="term-fg32">222</span>:<span class="term-fg31 term-fg1">func</span> WithDecor(d Decor) Option {
+<span class="term-fg32">223</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor = d }
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func</span> New(title string, opts ...Option) *Book {
+<span class="term-fg32">236</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Category(name, id string, screens ...Screen) {
+<span class="term-fg32">242</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) CategoryWithBlurb(name, id, blurb string, screens ...Screen) {
+<span class="term-fg32">247</span>:<span class="term-fg31 term-fg1">func</span> Scr(id, title, desc, command, ansiOutput string) Screen {
+<span class="term-fg32">257</span>:&#47;&#47; Manual creates a screen by calling a builder <span class="term-fg31 term-fg1">func</span>tion that writes ANSI output.
+<span class="term-fg32">258</span>:<span class="term-fg31 term-fg1">func</span> Manual(id, title, desc, command string, fn <span class="term-fg31 term-fg1">func</span>(w io.Writer)) Screen {
+<span class="term-fg32">286</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) buildCustomCSS() string {
+<span class="term-fg32">308</span>:<span class="term-fg31 term-fg1">func</span> normalizeScreens(cats []Category) []Category {
+<span class="term-fg32">325</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Generate(outputPath string) error {
+<span class="term-fg32">326</span>:	<span class="term-fg31 term-fg1">func</span>s := template.FuncMap{
+<span class="term-fg32">327</span>:		&quot;inc&quot;: <span class="term-fg31 term-fg1">func</span>(i int) int { return i + 1 },
+<span class="term-fg32">328</span>:		&quot;sub&quot;: <span class="term-fg31 term-fg1">func</span>(a, b int) int { return a - b },
+<span class="term-fg32">330</span>:	tmpl, err := template.New(&quot;termbook&quot;).Funcs(<span class="term-fg31 term-fg1">func</span>s).Parse(cmp.Or(b.opts.templateHTML, defaultTemplate))
+&nbsp;
+<span class="term-fg35">corpus&#47;gallery.html</span>
+<span class="term-fg32">665</span>:(<span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">671</span>:  <span class="term-fg31 term-fg1">func</span>tion sync(){
+<span class="term-fg32">679</span>:  <span class="term-fg31 term-fg1">func</span>tion set(t){ D.setAttribute(&#39;data-theme&#39;, t); localStorage.setItem(&#39;termbook-theme&#39;, t); sync(); }
+<span class="term-fg32">680</span>:  tDark.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){ set(&#39;dark&#39;); });
+<span class="term-fg32">681</span>:  tLight.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){ set(&#39;light&#39;); });
+<span class="term-fg32">682</span>:  <span class="term-fg31 term-fg1">func</span>tion toggleTheme(){ set(D.getAttribute(&#39;data-theme&#39;) === &#39;dark&#39; ? &#39;light&#39; : &#39;dark&#39;); }
+<span class="term-fg32">685</span>:  <span class="term-fg31 term-fg1">func</span>tion updateFilter(){
+<span class="term-fg32">687</span>:    document.querySelectorAll(&#39;.entry&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){
+<span class="term-fg32">691</span>:    document.querySelectorAll(&#39;.side-nav a&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){
+<span class="term-fg32">695</span>:    document.querySelectorAll(&#39;.section&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(sec){
+<span class="term-fg32">699</span>:    document.querySelectorAll(&#39;.side-nav .grp&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(grp){
+<span class="term-fg32">708</span>:  <span class="term-fg31 term-fg1">func</span>tion setNavOpen(open){
+<span class="term-fg32">716</span>:  navToggle.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">720</span>:  q.addEventListener(&#39;focus&#39;, <span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">724</span>:  sideEl.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">730</span>:  document.addEventListener(&#39;keydown&#39;, <span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">739</span>:  var obs = new IntersectionObserver(<span class="term-fg31 term-fg1">func</span>tion(entries){
+<span class="term-fg32">740</span>:    entries.forEach(<span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">745</span>:  document.querySelectorAll(&#39;.entry[id]&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){ obs.observe(el); });
+&nbsp;
+<span class="term-fg35">corpus&#47;README.md</span>
+<span class="term-fg32">28</span>:termbook.Manual(&quot;login&quot;, &quot;login&quot;, &quot;Auth flow&quot;, &quot;mycli login&quot;, <span class="term-fg31 term-fg1">func</span>(w io.Writer) {
+<span class="term-fg32">36</span>:<span class="term-fg31 term-fg1">func</span> capture(rootCmd *cobra.Command, args ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">19</span>:<span class="term-fg31 term-fg1">func</span> ManifestPath(workdir string) string {
+<span class="term-fg32">23</span>:<span class="term-fg31 term-fg1">func</span> CapturePath(workdir, id string) string {
+<span class="term-fg32">49</span>:<span class="term-fg31 term-fg1">func</span> Load(path string) (*Manifest, error) {
+<span class="term-fg32">61</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) Save(path string) error {
+<span class="term-fg32">72</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) UpsertScreen(catName string, s Screen) {
+<span class="term-fg32">95</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) FindScreen(id string) *Screen {
+<span class="term-fg32">107</span>:<span class="term-fg31 term-fg1">func</span> mergeScreen(existing, incoming Screen) Screen {
+<span class="term-fg32">120</span>:<span class="term-fg31 term-fg1">func</span> DeriveID(command string) string {
+<span class="term-fg32">124</span>:<span class="term-fg31 term-fg1">func</span> slugify(s string) string {
+<span class="term-fg32">144</span>:<span class="term-fg31 term-fg1">func</span> LoadOrInit(path, defaultTitle string) (*Manifest, bool, error) {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func</span> Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+<span class="term-fg32">90</span>:<span class="term-fg31 term-fg1">func</span> isExpectedReadErr(err error) bool {
+&nbsp;
+<span class="term-fg35">corpus&#47;LICENSE</span>
+<span class="term-fg32">161</span>:      work stoppage, computer failure or mal<span class="term-fg31 term-fg1">func</span>tion, or any and all
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func</span> main() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func</span> newRecordCmd() *cobra.Command {
+<span class="term-fg32">37</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, args []string) error {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">func</span> firstNonEmpty(s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func</span> newBuildCmd() *cobra.Command {
+<span class="term-fg32">23</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, _ []string) error {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">func</span> s2id(s string) string {</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="regex-go" data-cmd="regex-go" data-search="regex-go regex, go files  rg --type=go --pretty &#39;func \w&#43;\(&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">regex-go</div>
+              <h4>regex, Go files</h4>
+              
+              <div class="tags"><span>search</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --type=go --pretty &#39;func \w&#43;\(&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --type=go --pretty &#39;func \w&#43;\(&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">159</span>:<span class="term-fg31 term-fg1">func WithGitHub(</span>url string) Option {
+<span class="term-fg32">166</span>:<span class="term-fg31 term-fg1">func WithAccent(</span>hex string) Option {
+<span class="term-fg32">172</span>:<span class="term-fg31 term-fg1">func WithFont(</span>name, cssURL string) Option {
+<span class="term-fg32">178</span>:<span class="term-fg31 term-fg1">func WithSans(</span>name, cssURL string) Option {
+<span class="term-fg32">185</span>:<span class="term-fg31 term-fg1">func WithIntro(</span>text string) Option {
+<span class="term-fg32">190</span>:<span class="term-fg31 term-fg1">func WithDefaultTheme(</span>theme string) Option {
+<span class="term-fg32">199</span>:<span class="term-fg31 term-fg1">func WithColumns(</span>int) Option { return func(*options) {} }
+<span class="term-fg32">205</span>:<span class="term-fg31 term-fg1">func WithCSS(</span>css string) Option {
+<span class="term-fg32">212</span>:<span class="term-fg31 term-fg1">func WithTemplate(</span>html string) Option {
+<span class="term-fg32">222</span>:<span class="term-fg31 term-fg1">func WithDecor(</span>d Decor) Option {
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func New(</span>title string, opts ...Option) *Book {
+<span class="term-fg32">247</span>:<span class="term-fg31 term-fg1">func Scr(</span>id, title, desc, command, ansiOutput string) Screen {
+<span class="term-fg32">258</span>:<span class="term-fg31 term-fg1">func Manual(</span>id, title, desc, command string, fn func(w io.Writer)) Screen {
+<span class="term-fg32">308</span>:<span class="term-fg31 term-fg1">func normalizeScreens(</span>cats []Category) []Category {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">19</span>:<span class="term-fg31 term-fg1">func ManifestPath(</span>workdir string) string {
+<span class="term-fg32">23</span>:<span class="term-fg31 term-fg1">func CapturePath(</span>workdir, id string) string {
+<span class="term-fg32">49</span>:<span class="term-fg31 term-fg1">func Load(</span>path string) (*Manifest, error) {
+<span class="term-fg32">107</span>:<span class="term-fg31 term-fg1">func mergeScreen(</span>existing, incoming Screen) Screen {
+<span class="term-fg32">120</span>:<span class="term-fg31 term-fg1">func DeriveID(</span>command string) string {
+<span class="term-fg32">124</span>:<span class="term-fg31 term-fg1">func slugify(</span>s string) string {
+<span class="term-fg32">144</span>:<span class="term-fg31 term-fg1">func LoadOrInit(</span>path, defaultTitle string) (*Manifest, bool, error) {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func Run(</span>ctx context.Context, argv []string, opts Options) (*Result, error) {
+<span class="term-fg32">90</span>:<span class="term-fg31 term-fg1">func isExpectedReadErr(</span>err error) bool {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func main(</span>) {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func newRecordCmd(</span>) *cobra.Command {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">func firstNonEmpty(</span>s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func newBuildCmd(</span>) *cobra.Command {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">func s2id(</span>s string) string {</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="case-insensitive" data-cmd="case-insensitive" data-search="case-insensitive case insensitive  rg -i &#39;manifest&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">case-insensitive</div>
+              <h4>case insensitive</h4>
+              
+              <div class="tags"><span>search</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg -i &#39;manifest&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg -i &#39;manifest&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;action.yml</span>
+<span class="term-fg32">2</span>:description: Build a termbook gallery from a committed <span class="term-fg31 term-fg1">manifest</span> and captures.
+&nbsp;
+<span class="term-fg35">corpus&#47;PLAN.md</span>
+<span class="term-fg32">35</span>:| `record &lt;cmd...&gt;` | PTY-capture, save `&lt;id&gt;.ansi`, upsert <span class="term-fg31 term-fg1">manifest</span>. Creates `.termbook&#47;termbook.yml` on first call. | `--id`, `--cat`, `--title`, `--desc`, `--width` (120), `--timeout` (30s) |
+<span class="term-fg32">36</span>:| `build` | Read <span class="term-fg31 term-fg1">manifest</span> + captures, render gallery.html via library. | `-o &lt;path&gt;`, `--only &lt;id&gt;` (re-render single screen against existing capture set) |
+<span class="term-fg32">38</span>:`--only &lt;id&gt;` on **record** re-captures one screen by id (no <span class="term-fg31 term-fg1">manifest</span> changes). On **build** it filters which screens are emitted — useful for fast preview cycles.
+<span class="term-fg32">42</span>:## <span class="term-fg31 term-fg1">Manifest</span>
+<span class="term-fg32">81</span>:- `tiulpin&#47;termbook-examples` — four <span class="term-fg31 term-fg1">manifest</span>s, four CI workflows, deploys to Pages
+<span class="term-fg32">91</span>:- [ ] `cmd&#47;termbook&#47;build.go` — read <span class="term-fg31 term-fg1">manifest</span>, read captures, call library, write HTML; `--only` filter
+<span class="term-fg32">102</span>:- [ ] Composite GitHub Action at `.github&#47;actions&#47;termbook&#47;action.yml`: inputs (`<span class="term-fg31 term-fg1">manifest</span>-path`, `output`), steps (download release binary, run record for each entry, run build, upload artifact). No diff yet — that&#39;s v0.3.
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">15</span>:	<span class="term-fg31 term-fg1">Manifest</span>File = &quot;termbook.yml&quot;
+<span class="term-fg32">19</span>:func <span class="term-fg31 term-fg1">Manifest</span>Path(workdir string) string {
+<span class="term-fg32">20</span>:	return filepath.Join(workdir, Dir, <span class="term-fg31 term-fg1">Manifest</span>File)
+<span class="term-fg32">27</span>:type <span class="term-fg31 term-fg1">Manifest</span> struct {
+<span class="term-fg32">49</span>:func Load(path string) (*<span class="term-fg31 term-fg1">Manifest</span>, error) {
+<span class="term-fg32">54</span>:	var m <span class="term-fg31 term-fg1">Manifest</span>
+<span class="term-fg32">61</span>:func (m *<span class="term-fg31 term-fg1">Manifest</span>) Save(path string) error {
+<span class="term-fg32">67</span>:		return fmt.Errorf(&quot;marshal <span class="term-fg31 term-fg1">manifest</span>: %w&quot;, err)
+<span class="term-fg32">72</span>:func (m *<span class="term-fg31 term-fg1">Manifest</span>) UpsertScreen(catName string, s Screen) {
+<span class="term-fg32">95</span>:func (m *<span class="term-fg31 term-fg1">Manifest</span>) FindScreen(id string) *Screen {
+<span class="term-fg32">144</span>:func LoadOrInit(path, defaultTitle string) (*<span class="term-fg31 term-fg1">Manifest</span>, bool, error) {
+<span class="term-fg32">152</span>:	return &amp;<span class="term-fg31 term-fg1">Manifest</span>{Title: defaultTitle}, true, nil
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">30</span>:		Short: &quot;Capture a command&#39;s output and add it to the <span class="term-fg31 term-fg1">manifest</span>&quot;,
+<span class="term-fg32">32</span>:<span class="term-fg31 term-fg1">manifest</span>. The first invocation scaffolds .termbook&#47;termbook.yml.
+<span class="term-fg32">35</span>:its capture file without changing the <span class="term-fg31 term-fg1">manifest</span>.`,
+<span class="term-fg32">49</span>:			<span class="term-fg31 term-fg1">manifest</span>Path := config.<span class="term-fg31 term-fg1">Manifest</span>Path(workdir)
+<span class="term-fg32">51</span>:			m, _, err := config.LoadOrInit(<span class="term-fg31 term-fg1">manifest</span>Path, defaultTitle)
+<span class="term-fg32">60</span>:					return fmt.Errorf(&quot;no screen with id %q in %s&quot;, only, <span class="term-fg31 term-fg1">manifest</span>Path)
+<span class="term-fg32">104</span>:				if err := m.Save(<span class="term-fg31 term-fg1">manifest</span>Path); err != nil {
+<span class="term-fg32">122</span>:	cmd.Flags().IntVar(&amp;width, &quot;width&quot;, 0, &quot;PTY columns (default: <span class="term-fg31 term-fg1">manifest</span> width or 120)&quot;)
+<span class="term-fg32">124</span>:	cmd.Flags().StringVar(&amp;only, &quot;only&quot;, &quot;&quot;, &quot;re-capture an existing entry by id without modifying the <span class="term-fg31 term-fg1">manifest</span>&quot;)
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">21</span>:		Short: &quot;Render gallery.html from the <span class="term-fg31 term-fg1">manifest</span> and captures&quot;,
+<span class="term-fg32">28</span>:			<span class="term-fg31 term-fg1">manifest</span>Path := config.<span class="term-fg31 term-fg1">Manifest</span>Path(workdir)
+<span class="term-fg32">29</span>:			m, err := config.Load(<span class="term-fg31 term-fg1">manifest</span>Path)
+<span class="term-fg32">32</span>:					return fmt.Errorf(&quot;no <span class="term-fg31 term-fg1">manifest</span> at %s — run `termbook record` first&quot;, <span class="term-fg31 term-fg1">manifest</span>Path)</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="word-boundary" data-cmd="word-boundary" data-search="word-boundary whole-word match  rg -w func corpus/">
+            <div class="entry-meta">
+              <div class="id">word-boundary</div>
+              <h4>whole-word match</h4>
+              
+              <div class="tags"><span>search</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg -w func corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg -w func corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">62</span>:<span class="term-fg31 term-fg1">func</span> (s Screen) SearchKey() string {
+<span class="term-fg32">156</span>:type Option <span class="term-fg31 term-fg1">func</span>(*options)
+<span class="term-fg32">159</span>:<span class="term-fg31 term-fg1">func</span> WithGitHub(url string) Option {
+<span class="term-fg32">160</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.githubURL = url }
+<span class="term-fg32">166</span>:<span class="term-fg31 term-fg1">func</span> WithAccent(hex string) Option {
+<span class="term-fg32">167</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.accent = hex }
+<span class="term-fg32">172</span>:<span class="term-fg31 term-fg1">func</span> WithFont(name, cssURL string) Option {
+<span class="term-fg32">173</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.fontName = name; o.fontURL = cssURL }
+<span class="term-fg32">178</span>:<span class="term-fg31 term-fg1">func</span> WithSans(name, cssURL string) Option {
+<span class="term-fg32">179</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.sansFontName = name; o.sansFontURL = cssURL }
+<span class="term-fg32">185</span>:<span class="term-fg31 term-fg1">func</span> WithIntro(text string) Option {
+<span class="term-fg32">186</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor.Lede = text }
+<span class="term-fg32">190</span>:<span class="term-fg31 term-fg1">func</span> WithDefaultTheme(theme string) Option {
+<span class="term-fg32">191</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.defaultTheme = theme }
+<span class="term-fg32">199</span>:<span class="term-fg31 term-fg1">func</span> WithColumns(int) Option { return <span class="term-fg31 term-fg1">func</span>(*options) {} }
+<span class="term-fg32">205</span>:<span class="term-fg31 term-fg1">func</span> WithCSS(css string) Option {
+<span class="term-fg32">206</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.customCSS = css }
+<span class="term-fg32">212</span>:<span class="term-fg31 term-fg1">func</span> WithTemplate(html string) Option {
+<span class="term-fg32">213</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.templateHTML = html }
+<span class="term-fg32">222</span>:<span class="term-fg31 term-fg1">func</span> WithDecor(d Decor) Option {
+<span class="term-fg32">223</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor = d }
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func</span> New(title string, opts ...Option) *Book {
+<span class="term-fg32">236</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Category(name, id string, screens ...Screen) {
+<span class="term-fg32">242</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) CategoryWithBlurb(name, id, blurb string, screens ...Screen) {
+<span class="term-fg32">247</span>:<span class="term-fg31 term-fg1">func</span> Scr(id, title, desc, command, ansiOutput string) Screen {
+<span class="term-fg32">258</span>:<span class="term-fg31 term-fg1">func</span> Manual(id, title, desc, command string, fn <span class="term-fg31 term-fg1">func</span>(w io.Writer)) Screen {
+<span class="term-fg32">286</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) buildCustomCSS() string {
+<span class="term-fg32">308</span>:<span class="term-fg31 term-fg1">func</span> normalizeScreens(cats []Category) []Category {
+<span class="term-fg32">325</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Generate(outputPath string) error {
+<span class="term-fg32">327</span>:		&quot;inc&quot;: <span class="term-fg31 term-fg1">func</span>(i int) int { return i + 1 },
+<span class="term-fg32">328</span>:		&quot;sub&quot;: <span class="term-fg31 term-fg1">func</span>(a, b int) int { return a - b },
+&nbsp;
+<span class="term-fg35">corpus&#47;README.md</span>
+<span class="term-fg32">28</span>:termbook.Manual(&quot;login&quot;, &quot;login&quot;, &quot;Auth flow&quot;, &quot;mycli login&quot;, <span class="term-fg31 term-fg1">func</span>(w io.Writer) {
+<span class="term-fg32">36</span>:<span class="term-fg31 term-fg1">func</span> capture(rootCmd *cobra.Command, args ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">19</span>:<span class="term-fg31 term-fg1">func</span> ManifestPath(workdir string) string {
+<span class="term-fg32">23</span>:<span class="term-fg31 term-fg1">func</span> CapturePath(workdir, id string) string {
+<span class="term-fg32">49</span>:<span class="term-fg31 term-fg1">func</span> Load(path string) (*Manifest, error) {
+<span class="term-fg32">61</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) Save(path string) error {
+<span class="term-fg32">72</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) UpsertScreen(catName string, s Screen) {
+<span class="term-fg32">95</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) FindScreen(id string) *Screen {
+<span class="term-fg32">107</span>:<span class="term-fg31 term-fg1">func</span> mergeScreen(existing, incoming Screen) Screen {
+<span class="term-fg32">120</span>:<span class="term-fg31 term-fg1">func</span> DeriveID(command string) string {
+<span class="term-fg32">124</span>:<span class="term-fg31 term-fg1">func</span> slugify(s string) string {
+<span class="term-fg32">144</span>:<span class="term-fg31 term-fg1">func</span> LoadOrInit(path, defaultTitle string) (*Manifest, bool, error) {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func</span> Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+<span class="term-fg32">90</span>:<span class="term-fg31 term-fg1">func</span> isExpectedReadErr(err error) bool {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func</span> main() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func</span> newRecordCmd() *cobra.Command {
+<span class="term-fg32">37</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, args []string) error {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">func</span> firstNonEmpty(s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func</span> newBuildCmd() *cobra.Command {
+<span class="term-fg32">23</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, _ []string) error {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">func</span> s2id(s string) string {</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-refine" data-grp="refine">
+        <div class="section-head">
+          <div class="section-num">§ 02</div>
+          <div class="section-name">Refine</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="context" data-cmd="context" data-search="context context lines  rg --type=go --context=2 &#39;cobra.command&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">context</div>
+              <h4>context lines</h4>
+              
+              <div class="tags"><span>refine</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --type=go --context=2 &#39;cobra.Command&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --type=go --context=2 &#39;cobra.Command&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">11</span>-
+<span class="term-fg32">12</span>-func main() {
+<span class="term-fg32">13</span>:	root := &amp;<span class="term-fg31 term-fg1">cobra.Command</span>{
+<span class="term-fg32">14</span>-		Use:           &quot;termbook&quot;,
+<span class="term-fg32">15</span>-		Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">16</span>-)
+<span class="term-fg32">17</span>-
+<span class="term-fg32">18</span>:func newRecordCmd() *<span class="term-fg31 term-fg1">cobra.Command</span> {
+<span class="term-fg32">19</span>-	var (
+<span class="term-fg32">20</span>-		id      string
+--
+<span class="term-fg32">26</span>-		only    string
+<span class="term-fg32">27</span>-	)
+<span class="term-fg32">28</span>:	cmd := &amp;<span class="term-fg31 term-fg1">cobra.Command</span>{
+<span class="term-fg32">29</span>-		Use:   &quot;record [command...]&quot;,
+<span class="term-fg32">30</span>-		Short: &quot;Capture a command&#39;s output and add it to the manifest&quot;,
+--
+<span class="term-fg32">35</span>-its capture file without changing the manifest.`,
+<span class="term-fg32">36</span>-		Args: cobra.ArbitraryArgs,
+<span class="term-fg32">37</span>:		RunE: func(cc *<span class="term-fg31 term-fg1">cobra.Command</span>, args []string) error {
+<span class="term-fg32">38</span>-			workdir, err := os.Getwd()
+<span class="term-fg32">39</span>-			if err != nil {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">12</span>-)
+<span class="term-fg32">13</span>-
+<span class="term-fg32">14</span>:func newBuildCmd() *<span class="term-fg31 term-fg1">cobra.Command</span> {
+<span class="term-fg32">15</span>-	var (
+<span class="term-fg32">16</span>-		output string
+<span class="term-fg32">17</span>-		only   string
+<span class="term-fg32">18</span>-	)
+<span class="term-fg32">19</span>:	cmd := &amp;<span class="term-fg31 term-fg1">cobra.Command</span>{
+<span class="term-fg32">20</span>-		Use:   &quot;build&quot;,
+<span class="term-fg32">21</span>-		Short: &quot;Render gallery.html from the manifest and captures&quot;,
+<span class="term-fg32">22</span>-		Args:  cobra.NoArgs,
+<span class="term-fg32">23</span>:		RunE: func(cc *<span class="term-fg31 term-fg1">cobra.Command</span>, _ []string) error {
+<span class="term-fg32">24</span>-			workdir, err := os.Getwd()
+<span class="term-fg32">25</span>-			if err != nil {</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="before-after" data-cmd="before-after" data-search="before-after before / after  rg --type=go -b 1 -a 3 &#39;func new&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">before-after</div>
+              <h4>before / after</h4>
+              
+              <div class="tags"><span>refine</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --type=go -B 1 -A 3 &#39;func New&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --type=go -B 1 -A 3 &#39;func New&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">226</span>-&#47;&#47; New creates a new gallery book with the given title.
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func New</span>(title string, opts ...Option) *Book {
+<span class="term-fg32">228</span>-	b := &amp;Book{title: title}
+<span class="term-fg32">229</span>-	for _, o := range opts {
+<span class="term-fg32">230</span>-		o(&amp;b.opts)</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="max-count" data-cmd="max-count" data-search="max-count limit per file  rg --max-count=2 &#39;func&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">max-count</div>
+              <h4>limit per file</h4>
+              
+              <div class="tags"><span>refine</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --max-count=2 &#39;func&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --max-count=2 &#39;func&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">62</span>:<span class="term-fg31 term-fg1">func</span> (s Screen) SearchKey() string {
+<span class="term-fg32">94</span>:&#47;&#47; Option <span class="term-fg31 term-fg1">func</span>tions, which keeps the library&#39;s API surface small.
+&nbsp;
+<span class="term-fg35">corpus&#47;gallery.html</span>
+<span class="term-fg32">665</span>:(<span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">671</span>:  <span class="term-fg31 term-fg1">func</span>tion sync(){
+&nbsp;
+<span class="term-fg35">corpus&#47;README.md</span>
+<span class="term-fg32">28</span>:termbook.Manual(&quot;login&quot;, &quot;login&quot;, &quot;Auth flow&quot;, &quot;mycli login&quot;, <span class="term-fg31 term-fg1">func</span>(w io.Writer) {
+<span class="term-fg32">36</span>:<span class="term-fg31 term-fg1">func</span> capture(rootCmd *cobra.Command, args ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">19</span>:<span class="term-fg31 term-fg1">func</span> ManifestPath(workdir string) string {
+<span class="term-fg32">23</span>:<span class="term-fg31 term-fg1">func</span> CapturePath(workdir, id string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func</span> Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+<span class="term-fg32">90</span>:<span class="term-fg31 term-fg1">func</span> isExpectedReadErr(err error) bool {
+&nbsp;
+<span class="term-fg35">corpus&#47;LICENSE</span>
+<span class="term-fg32">161</span>:      work stoppage, computer failure or mal<span class="term-fg31 term-fg1">func</span>tion, or any and all
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func</span> main() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func</span> newRecordCmd() *cobra.Command {
+<span class="term-fg32">37</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, args []string) error {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func</span> newBuildCmd() *cobra.Command {
+<span class="term-fg32">23</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, _ []string) error {</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="multi-pattern" data-cmd="multi-pattern" data-search="multi-pattern multiple patterns  rg -e &#39;func new&#39; -e &#39;func run&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">multi-pattern</div>
+              <h4>multiple patterns</h4>
+              
+              <div class="tags"><span>refine</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg -e &#39;func New&#39; -e &#39;func Run&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg -e &#39;func New&#39; -e &#39;func Run&#39; corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func New</span>(title string, opts ...Option) *Book {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func Run</span>(ctx context.Context, argv []string, opts Options) (*Result, error) {</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-listings" data-grp="listings">
+        <div class="section-head">
+          <div class="section-num">§ 03</div>
+          <div class="section-name">Listings</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="files-with-matches" data-cmd="files-with-matches" data-search="files-with-matches files with matches  rg -l manifest corpus/">
+            <div class="entry-meta">
+              <div class="id">files-with-matches</div>
+              <h4>files with matches</h4>
+              
+              <div class="tags"><span>listings</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg -l Manifest corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg -l Manifest corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;PLAN.md</span>
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="count-per-file" data-cmd="count-per-file" data-search="count-per-file count per file  rg -c func corpus/">
+            <div class="entry-meta">
+              <div class="id">count-per-file</div>
+              <h4>count per file</h4>
+              
+              <div class="tags"><span>listings</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg -c func corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg -c func corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>:35
+<span class="term-fg35">corpus&#47;gallery.html</span>:19
+<span class="term-fg35">corpus&#47;README.md</span>:2
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>:10
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>:2
+<span class="term-fg35">corpus&#47;LICENSE</span>:1
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>:1
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>:3
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>:3</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="files" data-cmd="files" data-search="files all .go files  rg --files --type=go corpus/">
+            <div class="entry-meta">
+              <div class="id">files</div>
+              <h4>all .go files</h4>
+              
+              <div class="tags"><span>listings</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --files --type=go corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --files --type=go corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="stats" data-cmd="stats" data-search="stats match stats  rg --stats func corpus/">
+            <div class="entry-meta">
+              <div class="id">stats</div>
+              <h4>match stats</h4>
+              
+              <div class="tags"><span>listings</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --stats func corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --stats func corpus/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;termbook.go</span>
+<span class="term-fg32">62</span>:<span class="term-fg31 term-fg1">func</span> (s Screen) SearchKey() string {
+<span class="term-fg32">94</span>:&#47;&#47; Option <span class="term-fg31 term-fg1">func</span>tions, which keeps the library&#39;s API surface small.
+<span class="term-fg32">156</span>:type Option <span class="term-fg31 term-fg1">func</span>(*options)
+<span class="term-fg32">159</span>:<span class="term-fg31 term-fg1">func</span> WithGitHub(url string) Option {
+<span class="term-fg32">160</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.githubURL = url }
+<span class="term-fg32">166</span>:<span class="term-fg31 term-fg1">func</span> WithAccent(hex string) Option {
+<span class="term-fg32">167</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.accent = hex }
+<span class="term-fg32">172</span>:<span class="term-fg31 term-fg1">func</span> WithFont(name, cssURL string) Option {
+<span class="term-fg32">173</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.fontName = name; o.fontURL = cssURL }
+<span class="term-fg32">178</span>:<span class="term-fg31 term-fg1">func</span> WithSans(name, cssURL string) Option {
+<span class="term-fg32">179</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.sansFontName = name; o.sansFontURL = cssURL }
+<span class="term-fg32">185</span>:<span class="term-fg31 term-fg1">func</span> WithIntro(text string) Option {
+<span class="term-fg32">186</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor.Lede = text }
+<span class="term-fg32">190</span>:<span class="term-fg31 term-fg1">func</span> WithDefaultTheme(theme string) Option {
+<span class="term-fg32">191</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.defaultTheme = theme }
+<span class="term-fg32">199</span>:<span class="term-fg31 term-fg1">func</span> WithColumns(int) Option { return <span class="term-fg31 term-fg1">func</span>(*options) {} }
+<span class="term-fg32">205</span>:<span class="term-fg31 term-fg1">func</span> WithCSS(css string) Option {
+<span class="term-fg32">206</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.customCSS = css }
+<span class="term-fg32">212</span>:<span class="term-fg31 term-fg1">func</span> WithTemplate(html string) Option {
+<span class="term-fg32">213</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.templateHTML = html }
+<span class="term-fg32">222</span>:<span class="term-fg31 term-fg1">func</span> WithDecor(d Decor) Option {
+<span class="term-fg32">223</span>:	return <span class="term-fg31 term-fg1">func</span>(o *options) { o.decor = d }
+<span class="term-fg32">227</span>:<span class="term-fg31 term-fg1">func</span> New(title string, opts ...Option) *Book {
+<span class="term-fg32">236</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Category(name, id string, screens ...Screen) {
+<span class="term-fg32">242</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) CategoryWithBlurb(name, id, blurb string, screens ...Screen) {
+<span class="term-fg32">247</span>:<span class="term-fg31 term-fg1">func</span> Scr(id, title, desc, command, ansiOutput string) Screen {
+<span class="term-fg32">257</span>:&#47;&#47; Manual creates a screen by calling a builder <span class="term-fg31 term-fg1">func</span>tion that writes ANSI output.
+<span class="term-fg32">258</span>:<span class="term-fg31 term-fg1">func</span> Manual(id, title, desc, command string, fn <span class="term-fg31 term-fg1">func</span>(w io.Writer)) Screen {
+<span class="term-fg32">286</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) buildCustomCSS() string {
+<span class="term-fg32">308</span>:<span class="term-fg31 term-fg1">func</span> normalizeScreens(cats []Category) []Category {
+<span class="term-fg32">325</span>:<span class="term-fg31 term-fg1">func</span> (b *Book) Generate(outputPath string) error {
+<span class="term-fg32">326</span>:	<span class="term-fg31 term-fg1">func</span>s := template.FuncMap{
+<span class="term-fg32">327</span>:		&quot;inc&quot;: <span class="term-fg31 term-fg1">func</span>(i int) int { return i + 1 },
+<span class="term-fg32">328</span>:		&quot;sub&quot;: <span class="term-fg31 term-fg1">func</span>(a, b int) int { return a - b },
+<span class="term-fg32">330</span>:	tmpl, err := template.New(&quot;termbook&quot;).Funcs(<span class="term-fg31 term-fg1">func</span>s).Parse(cmp.Or(b.opts.templateHTML, defaultTemplate))
+&nbsp;
+<span class="term-fg35">corpus&#47;gallery.html</span>
+<span class="term-fg32">665</span>:(<span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">671</span>:  <span class="term-fg31 term-fg1">func</span>tion sync(){
+<span class="term-fg32">679</span>:  <span class="term-fg31 term-fg1">func</span>tion set(t){ D.setAttribute(&#39;data-theme&#39;, t); localStorage.setItem(&#39;termbook-theme&#39;, t); sync(); }
+<span class="term-fg32">680</span>:  tDark.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){ set(&#39;dark&#39;); });
+<span class="term-fg32">681</span>:  tLight.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){ set(&#39;light&#39;); });
+<span class="term-fg32">682</span>:  <span class="term-fg31 term-fg1">func</span>tion toggleTheme(){ set(D.getAttribute(&#39;data-theme&#39;) === &#39;dark&#39; ? &#39;light&#39; : &#39;dark&#39;); }
+<span class="term-fg32">685</span>:  <span class="term-fg31 term-fg1">func</span>tion updateFilter(){
+<span class="term-fg32">687</span>:    document.querySelectorAll(&#39;.entry&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){
+<span class="term-fg32">691</span>:    document.querySelectorAll(&#39;.side-nav a&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){
+<span class="term-fg32">695</span>:    document.querySelectorAll(&#39;.section&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(sec){
+<span class="term-fg32">699</span>:    document.querySelectorAll(&#39;.side-nav .grp&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(grp){
+<span class="term-fg32">708</span>:  <span class="term-fg31 term-fg1">func</span>tion setNavOpen(open){
+<span class="term-fg32">716</span>:  navToggle.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">720</span>:  q.addEventListener(&#39;focus&#39;, <span class="term-fg31 term-fg1">func</span>tion(){
+<span class="term-fg32">724</span>:  sideEl.addEventListener(&#39;click&#39;, <span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">730</span>:  document.addEventListener(&#39;keydown&#39;, <span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">739</span>:  var obs = new IntersectionObserver(<span class="term-fg31 term-fg1">func</span>tion(entries){
+<span class="term-fg32">740</span>:    entries.forEach(<span class="term-fg31 term-fg1">func</span>tion(e){
+<span class="term-fg32">745</span>:  document.querySelectorAll(&#39;.entry[id]&#39;).forEach(<span class="term-fg31 term-fg1">func</span>tion(el){ obs.observe(el); });
+&nbsp;
+<span class="term-fg35">corpus&#47;README.md</span>
+<span class="term-fg32">28</span>:termbook.Manual(&quot;login&quot;, &quot;login&quot;, &quot;Auth flow&quot;, &quot;mycli login&quot;, <span class="term-fg31 term-fg1">func</span>(w io.Writer) {
+<span class="term-fg32">36</span>:<span class="term-fg31 term-fg1">func</span> capture(rootCmd *cobra.Command, args ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;config&#47;config.go</span>
+<span class="term-fg32">19</span>:<span class="term-fg31 term-fg1">func</span> ManifestPath(workdir string) string {
+<span class="term-fg32">23</span>:<span class="term-fg31 term-fg1">func</span> CapturePath(workdir, id string) string {
+<span class="term-fg32">49</span>:<span class="term-fg31 term-fg1">func</span> Load(path string) (*Manifest, error) {
+<span class="term-fg32">61</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) Save(path string) error {
+<span class="term-fg32">72</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) UpsertScreen(catName string, s Screen) {
+<span class="term-fg32">95</span>:<span class="term-fg31 term-fg1">func</span> (m *Manifest) FindScreen(id string) *Screen {
+<span class="term-fg32">107</span>:<span class="term-fg31 term-fg1">func</span> mergeScreen(existing, incoming Screen) Screen {
+<span class="term-fg32">120</span>:<span class="term-fg31 term-fg1">func</span> DeriveID(command string) string {
+<span class="term-fg32">124</span>:<span class="term-fg31 term-fg1">func</span> slugify(s string) string {
+<span class="term-fg32">144</span>:<span class="term-fg31 term-fg1">func</span> LoadOrInit(path, defaultTitle string) (*Manifest, bool, error) {
+&nbsp;
+<span class="term-fg35">corpus&#47;internal&#47;capture&#47;capture.go</span>
+<span class="term-fg32">28</span>:<span class="term-fg31 term-fg1">func</span> Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+<span class="term-fg32">90</span>:<span class="term-fg31 term-fg1">func</span> isExpectedReadErr(err error) bool {
+&nbsp;
+<span class="term-fg35">corpus&#47;LICENSE</span>
+<span class="term-fg32">161</span>:      work stoppage, computer failure or mal<span class="term-fg31 term-fg1">func</span>tion, or any and all
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func</span> main() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func</span> newRecordCmd() *cobra.Command {
+<span class="term-fg32">37</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, args []string) error {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">func</span> firstNonEmpty(s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func</span> newBuildCmd() *cobra.Command {
+<span class="term-fg32">23</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, _ []string) error {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">func</span> s2id(s string) string {
+&nbsp;
+&nbsp;
+78 matches
+76 matched lines
+9 files contained matches
+13 files searched
+4421 bytes printed
+78365 bytes searched
+0.000245 seconds spent searching
+0.003086 seconds total</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-output" data-grp="output">
+        <div class="section-head">
+          <div class="section-num">§ 04</div>
+          <div class="section-name">Output</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="replace" data-cmd="replace" data-search="replace preview replacement  rg --replace &#39;«$0»&#39; &#39;func \w&#43;&#39; corpus/cmd/">
+            <div class="entry-meta">
+              <div class="id">replace</div>
+              <h4>preview replacement</h4>
+              
+              <div class="tags"><span>output</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --replace &#39;«$0»&#39; &#39;func \w&#43;&#39; corpus/cmd/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --replace &#39;«$0»&#39; &#39;func \w&#43;&#39; corpus/cmd/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">«func main»</span>() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">«func newRecordCmd»</span>() *cobra.Command {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">«func firstNonEmpty»</span>(s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">«func newBuildCmd»</span>() *cobra.Command {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">«func s2id»</span>(s string) string {</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="json" data-cmd="json" data-search="json json output  rg --json --max-count=1 &#39;func new&#39; corpus/">
+            <div class="entry-meta">
+              <div class="id">json</div>
+              <h4>JSON output</h4>
+              
+              <div class="tags"><span>output</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --json --max-count=1 &#39;func New&#39; corpus/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --json --max-count=1 &#39;func New&#39; corpus/</span></div>
+                <pre class="term-body">{&quot;type&quot;:&quot;begin&quot;,&quot;data&quot;:{&quot;path&quot;:{&quot;text&quot;:&quot;corpus&#47;termbook.go&quot;}}}
+{&quot;type&quot;:&quot;match&quot;,&quot;data&quot;:{&quot;path&quot;:{&quot;text&quot;:&quot;corpus&#47;termbook.go&quot;},&quot;lines&quot;:{&quot;text&quot;:&quot;func New(title string, opts ...Option) *Book {\n&quot;},&quot;line_number&quot;:227,&quot;absolute_offset&quot;:7328,&quot;submatches&quot;:[{&quot;match&quot;:{&quot;text&quot;:&quot;func New&quot;},&quot;start&quot;:0,&quot;end&quot;:8}]}}
+{&quot;type&quot;:&quot;end&quot;,&quot;data&quot;:{&quot;path&quot;:{&quot;text&quot;:&quot;corpus&#47;termbook.go&quot;},&quot;binary_offset&quot;:null,&quot;stats&quot;:{&quot;elapsed&quot;:{&quot;secs&quot;:0,&quot;nanos&quot;:10792,&quot;human&quot;:&quot;0.000011s&quot;},&quot;searches&quot;:1,&quot;searches_with_match&quot;:1,&quot;bytes_searched&quot;:7375,&quot;bytes_printed&quot;:298,&quot;matched_lines&quot;:1,&quot;matches&quot;:1}}}
+{&quot;data&quot;:{&quot;elapsed_total&quot;:{&quot;human&quot;:&quot;0.001910s&quot;,&quot;nanos&quot;:1909542,&quot;secs&quot;:0},&quot;stats&quot;:{&quot;bytes_printed&quot;:298,&quot;bytes_searched&quot;:73955,&quot;elapsed&quot;:{&quot;human&quot;:&quot;0.000054s&quot;,&quot;nanos&quot;:53835,&quot;secs&quot;:0},&quot;matched_lines&quot;:1,&quot;matches&quot;:1,&quot;searches&quot;:13,&quot;searches_with_match&quot;:1}},&quot;type&quot;:&quot;summary&quot;}</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="heading" data-cmd="heading" data-search="heading with file headings  rg --color=always --heading &#39;func&#39; corpus/cmd/">
+            <div class="entry-meta">
+              <div class="id">heading</div>
+              <h4>with file headings</h4>
+              
+              <div class="tags"><span>output</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">rg --color=always --heading &#39;func&#39; corpus/cmd/</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">rg --color=always --heading &#39;func&#39; corpus/cmd/</span></div>
+                <pre class="term-body"><span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fg32">12</span>:<span class="term-fg31 term-fg1">func</span> main() {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+<span class="term-fg32">18</span>:<span class="term-fg31 term-fg1">func</span> newRecordCmd() *cobra.Command {
+<span class="term-fg32">37</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, args []string) error {
+<span class="term-fg32">128</span>:<span class="term-fg31 term-fg1">func</span> firstNonEmpty(s ...string) string {
+&nbsp;
+<span class="term-fg35">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+<span class="term-fg32">14</span>:<span class="term-fg31 term-fg1">func</span> newBuildCmd() *cobra.Command {
+<span class="term-fg32">23</span>:		RunE: <span class="term-fg31 term-fg1">func</span>(cc *cobra.Command, _ []string) error {
+<span class="term-fg32">96</span>:<span class="term-fg31 term-fg1">func</span> s2id(s string) string {</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      
+    </div>
+
+    <footer class="foot">
+      <div>generated with <a href="https://github.com/tiulpin/termbook">termbook</a></div>
+      <div>15 screens · 2026-05-01 18:39</div>
+    </footer>
+    
+  </main>
+</div>
+
+<script>
+(function(){
+  var D = document.documentElement;
+  var saved = localStorage.getItem('termbook-theme');
+  if (saved) D.setAttribute('data-theme', saved);
+  var tDark = document.getElementById('tDark');
+  var tLight = document.getElementById('tLight');
+  function sync(){
+    var t = D.getAttribute('data-theme');
+    tDark.classList.toggle('active', t === 'dark');
+    tLight.classList.toggle('active', t === 'light');
+    tDark.setAttribute('aria-pressed', t === 'dark');
+    tLight.setAttribute('aria-pressed', t === 'light');
+  }
+  sync();
+  function set(t){ D.setAttribute('data-theme', t); localStorage.setItem('termbook-theme', t); sync(); }
+  tDark.addEventListener('click', function(){ set('dark'); });
+  tLight.addEventListener('click', function(){ set('light'); });
+  function toggleTheme(){ set(D.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+  var q = document.getElementById('q');
+  function updateFilter(){
+    var v = q.value.trim().toLowerCase();
+    document.querySelectorAll('.entry').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.side-nav a').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.section').forEach(function(sec){
+      var visible = sec.querySelectorAll('.entry:not(.hidden)').length;
+      sec.classList.toggle('empty', visible === 0);
+    });
+    document.querySelectorAll('.side-nav .grp').forEach(function(grp){
+      var visible = grp.querySelectorAll('a:not(.hidden)').length;
+      grp.style.display = visible ? '' : 'none';
+    });
+  }
+  q.addEventListener('input', updateFilter);
+
+  var sideEl = document.getElementById('side');
+  var navToggle = document.getElementById('navToggle');
+  function setNavOpen(open){
+    sideEl.classList.toggle('nav-open', open);
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var icon = navToggle.querySelector('.nav-toggle-icon');
+    var label = navToggle.querySelector('.nav-toggle-label');
+    if (icon) icon.textContent = open ? '✕' : '☰';
+    if (label) label.textContent = open ? 'close' : 'menu';
+  }
+  navToggle.addEventListener('click', function(){
+    setNavOpen(!sideEl.classList.contains('nav-open'));
+  });
+   
+  q.addEventListener('focus', function(){
+    if (window.matchMedia('(max-width: 900px)').matches) setNavOpen(true);
+  });
+   
+  sideEl.addEventListener('click', function(e){
+    if (e.target.closest('.side-nav a') && window.matchMedia('(max-width: 900px)').matches) {
+      setNavOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT') {
+      if (e.key === 'Escape') { q.value = ''; q.blur(); updateFilter(); }
+      return;
+    }
+    if (e.key === '/') { e.preventDefault(); q.focus(); }
+    else if (e.key === 't' || e.key === 'T') { toggleTheme(); }
+  });
+
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      var link = document.querySelector('.side-nav a[data-cmd="' + e.target.id + '"]');
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('.entry[id]').forEach(function(el){ obs.observe(el); });
+})();
+</script>
+</body>
+</html>

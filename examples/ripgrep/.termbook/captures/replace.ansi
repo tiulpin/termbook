@@ -1,0 +1,10 @@
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m12[0m:[0m[1m[31m«func main»[0m() {
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m18[0m:[0m[1m[31m«func newRecordCmd»[0m() *cobra.Command {
+[0m[32m128[0m:[0m[1m[31m«func firstNonEmpty»[0m(s ...string) string {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m14[0m:[0m[1m[31m«func newBuildCmd»[0m() *cobra.Command {
+[0m[32m96[0m:[0m[1m[31m«func s2id»[0m(s string) string {

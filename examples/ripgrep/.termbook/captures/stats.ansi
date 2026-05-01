@@ -1,0 +1,103 @@
+[0m[35mcorpus/termbook.go[0m
+[0m[32m62[0m:[0m[1m[31mfunc[0m (s Screen) SearchKey() string {
+[0m[32m94[0m:// Option [0m[1m[31mfunc[0mtions, which keeps the library's API surface small.
+[0m[32m156[0m:type Option [0m[1m[31mfunc[0m(*options)
+[0m[32m159[0m:[0m[1m[31mfunc[0m WithGitHub(url string) Option {
+[0m[32m160[0m:	return [0m[1m[31mfunc[0m(o *options) { o.githubURL = url }
+[0m[32m166[0m:[0m[1m[31mfunc[0m WithAccent(hex string) Option {
+[0m[32m167[0m:	return [0m[1m[31mfunc[0m(o *options) { o.accent = hex }
+[0m[32m172[0m:[0m[1m[31mfunc[0m WithFont(name, cssURL string) Option {
+[0m[32m173[0m:	return [0m[1m[31mfunc[0m(o *options) { o.fontName = name; o.fontURL = cssURL }
+[0m[32m178[0m:[0m[1m[31mfunc[0m WithSans(name, cssURL string) Option {
+[0m[32m179[0m:	return [0m[1m[31mfunc[0m(o *options) { o.sansFontName = name; o.sansFontURL = cssURL }
+[0m[32m185[0m:[0m[1m[31mfunc[0m WithIntro(text string) Option {
+[0m[32m186[0m:	return [0m[1m[31mfunc[0m(o *options) { o.decor.Lede = text }
+[0m[32m190[0m:[0m[1m[31mfunc[0m WithDefaultTheme(theme string) Option {
+[0m[32m191[0m:	return [0m[1m[31mfunc[0m(o *options) { o.defaultTheme = theme }
+[0m[32m199[0m:[0m[1m[31mfunc[0m WithColumns(int) Option { return [0m[1m[31mfunc[0m(*options) {} }
+[0m[32m205[0m:[0m[1m[31mfunc[0m WithCSS(css string) Option {
+[0m[32m206[0m:	return [0m[1m[31mfunc[0m(o *options) { o.customCSS = css }
+[0m[32m212[0m:[0m[1m[31mfunc[0m WithTemplate(html string) Option {
+[0m[32m213[0m:	return [0m[1m[31mfunc[0m(o *options) { o.templateHTML = html }
+[0m[32m222[0m:[0m[1m[31mfunc[0m WithDecor(d Decor) Option {
+[0m[32m223[0m:	return [0m[1m[31mfunc[0m(o *options) { o.decor = d }
+[0m[32m227[0m:[0m[1m[31mfunc[0m New(title string, opts ...Option) *Book {
+[0m[32m236[0m:[0m[1m[31mfunc[0m (b *Book) Category(name, id string, screens ...Screen) {
+[0m[32m242[0m:[0m[1m[31mfunc[0m (b *Book) CategoryWithBlurb(name, id, blurb string, screens ...Screen) {
+[0m[32m247[0m:[0m[1m[31mfunc[0m Scr(id, title, desc, command, ansiOutput string) Screen {
+[0m[32m257[0m:// Manual creates a screen by calling a builder [0m[1m[31mfunc[0mtion that writes ANSI output.
+[0m[32m258[0m:[0m[1m[31mfunc[0m Manual(id, title, desc, command string, fn [0m[1m[31mfunc[0m(w io.Writer)) Screen {
+[0m[32m286[0m:[0m[1m[31mfunc[0m (b *Book) buildCustomCSS() string {
+[0m[32m308[0m:[0m[1m[31mfunc[0m normalizeScreens(cats []Category) []Category {
+[0m[32m325[0m:[0m[1m[31mfunc[0m (b *Book) Generate(outputPath string) error {
+[0m[32m326[0m:	[0m[1m[31mfunc[0ms := template.FuncMap{
+[0m[32m327[0m:		"inc": [0m[1m[31mfunc[0m(i int) int { return i + 1 },
+[0m[32m328[0m:		"sub": [0m[1m[31mfunc[0m(a, b int) int { return a - b },
+[0m[32m330[0m:	tmpl, err := template.New("termbook").Funcs([0m[1m[31mfunc[0ms).Parse(cmp.Or(b.opts.templateHTML, defaultTemplate))
+
+[0m[35mcorpus/gallery.html[0m
+[0m[32m665[0m:([0m[1m[31mfunc[0mtion(){
+[0m[32m671[0m:  [0m[1m[31mfunc[0mtion sync(){
+[0m[32m679[0m:  [0m[1m[31mfunc[0mtion set(t){ D.setAttribute('data-theme', t); localStorage.setItem('termbook-theme', t); sync(); }
+[0m[32m680[0m:  tDark.addEventListener('click', [0m[1m[31mfunc[0mtion(){ set('dark'); });
+[0m[32m681[0m:  tLight.addEventListener('click', [0m[1m[31mfunc[0mtion(){ set('light'); });
+[0m[32m682[0m:  [0m[1m[31mfunc[0mtion toggleTheme(){ set(D.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+[0m[32m685[0m:  [0m[1m[31mfunc[0mtion updateFilter(){
+[0m[32m687[0m:    document.querySelectorAll('.entry').forEach([0m[1m[31mfunc[0mtion(el){
+[0m[32m691[0m:    document.querySelectorAll('.side-nav a').forEach([0m[1m[31mfunc[0mtion(el){
+[0m[32m695[0m:    document.querySelectorAll('.section').forEach([0m[1m[31mfunc[0mtion(sec){
+[0m[32m699[0m:    document.querySelectorAll('.side-nav .grp').forEach([0m[1m[31mfunc[0mtion(grp){
+[0m[32m708[0m:  [0m[1m[31mfunc[0mtion setNavOpen(open){
+[0m[32m716[0m:  navToggle.addEventListener('click', [0m[1m[31mfunc[0mtion(){
+[0m[32m720[0m:  q.addEventListener('focus', [0m[1m[31mfunc[0mtion(){
+[0m[32m724[0m:  sideEl.addEventListener('click', [0m[1m[31mfunc[0mtion(e){
+[0m[32m730[0m:  document.addEventListener('keydown', [0m[1m[31mfunc[0mtion(e){
+[0m[32m739[0m:  var obs = new IntersectionObserver([0m[1m[31mfunc[0mtion(entries){
+[0m[32m740[0m:    entries.forEach([0m[1m[31mfunc[0mtion(e){
+[0m[32m745[0m:  document.querySelectorAll('.entry[id]').forEach([0m[1m[31mfunc[0mtion(el){ obs.observe(el); });
+
+[0m[35mcorpus/README.md[0m
+[0m[32m28[0m:termbook.Manual("login", "login", "Auth flow", "mycli login", [0m[1m[31mfunc[0m(w io.Writer) {
+[0m[32m36[0m:[0m[1m[31mfunc[0m capture(rootCmd *cobra.Command, args ...string) string {
+
+[0m[35mcorpus/internal/config/config.go[0m
+[0m[32m19[0m:[0m[1m[31mfunc[0m ManifestPath(workdir string) string {
+[0m[32m23[0m:[0m[1m[31mfunc[0m CapturePath(workdir, id string) string {
+[0m[32m49[0m:[0m[1m[31mfunc[0m Load(path string) (*Manifest, error) {
+[0m[32m61[0m:[0m[1m[31mfunc[0m (m *Manifest) Save(path string) error {
+[0m[32m72[0m:[0m[1m[31mfunc[0m (m *Manifest) UpsertScreen(catName string, s Screen) {
+[0m[32m95[0m:[0m[1m[31mfunc[0m (m *Manifest) FindScreen(id string) *Screen {
+[0m[32m107[0m:[0m[1m[31mfunc[0m mergeScreen(existing, incoming Screen) Screen {
+[0m[32m120[0m:[0m[1m[31mfunc[0m DeriveID(command string) string {
+[0m[32m124[0m:[0m[1m[31mfunc[0m slugify(s string) string {
+[0m[32m144[0m:[0m[1m[31mfunc[0m LoadOrInit(path, defaultTitle string) (*Manifest, bool, error) {
+
+[0m[35mcorpus/internal/capture/capture.go[0m
+[0m[32m28[0m:[0m[1m[31mfunc[0m Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
+[0m[32m90[0m:[0m[1m[31mfunc[0m isExpectedReadErr(err error) bool {
+
+[0m[35mcorpus/LICENSE[0m
+[0m[32m161[0m:      work stoppage, computer failure or mal[0m[1m[31mfunc[0mtion, or any and all
+
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m12[0m:[0m[1m[31mfunc[0m main() {
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m18[0m:[0m[1m[31mfunc[0m newRecordCmd() *cobra.Command {
+[0m[32m37[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, args []string) error {
+[0m[32m128[0m:[0m[1m[31mfunc[0m firstNonEmpty(s ...string) string {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m14[0m:[0m[1m[31mfunc[0m newBuildCmd() *cobra.Command {
+[0m[32m23[0m:		RunE: [0m[1m[31mfunc[0m(cc *cobra.Command, _ []string) error {
+[0m[32m96[0m:[0m[1m[31mfunc[0m s2id(s string) string {
+
+
+78 matches
+76 matched lines
+9 files contained matches
+13 files searched
+4421 bytes printed
+78365 bytes searched
+0.000245 seconds spent searching
+0.003086 seconds total

@@ -1,0 +1,5 @@
+[0m[35mcorpus/termbook.go[0m
+[0m[32m227[0m:[0m[1m[31mfunc New[0m(title string, opts ...Option) *Book {
+
+[0m[35mcorpus/internal/capture/capture.go[0m
+[0m[32m28[0m:[0m[1m[31mfunc Run[0m(ctx context.Context, argv []string, opts Options) (*Result, error) {

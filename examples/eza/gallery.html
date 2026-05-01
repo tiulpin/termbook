@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eza — modern ls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains&#43;Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+:root, [data-theme="dark"] {
+  --bg: #0b0d10; --bg-1: #111419; --bg-2: #161a20; --bg-3: #1c2128;
+  --line: #242a33; --line-2: #2f3742;
+  --fg: #e6e8eb; --fg-2: #b6bcc5; --fg-3: #7d8693; --fg-4: #4a525d;
+  --green:  oklch(0.78 0.14 150);
+  --red:    oklch(0.72 0.17 25);
+  --yellow: oklch(0.82 0.15 85);
+  --cyan:   oklch(0.80 0.12 210);
+  --blue:   oklch(0.74 0.14 240);
+  --magenta:oklch(0.74 0.15 330);
+  --accent: oklch(0.82 0.15 85);
+}
+[data-theme="light"] {
+  --bg: #f6f5f1; --bg-1: #ffffff; --bg-2: #ecebe6; --bg-3: #e1dfd8;
+  --line: #d6d4cc; --line-2: #bcb9ae;
+  --fg: #17191c; --fg-2: #2e3238; --fg-3: #5a6069; --fg-4: #8e949d;
+  --green:  oklch(0.55 0.16 145);
+  --red:    oklch(0.55 0.20 25);
+  --yellow: oklch(0.58 0.16 75);
+  --cyan:   oklch(0.52 0.13 220);
+  --blue:   oklch(0.48 0.17 250);
+  --magenta:oklch(0.50 0.18 330);
+  --accent: oklch(0.55 0.16 75);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+ 
+.page {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+@media (min-width: 1441px) {
+  .page { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+}
+
+ 
+.side {
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  position: sticky; top: 0;
+  height: 100vh; overflow-y: auto;
+  padding: 28px 22px 40px;
+   
+  scrollbar-width: none;
+}
+.side::-webkit-scrollbar { display: none; }
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.brand-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 13px; letter-spacing: 0.01em;
+}
+.brand-ver {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); margin-left: auto;
+}
+.nav-toggle {
+  display: none;
+  align-items: center; gap: 6px;
+  margin-left: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.nav-toggle:hover { color: var(--fg); border-color: var(--line-2); }
+.nav-toggle-icon { font-size: 13px; line-height: 1; }
+
+.sidebar-meta {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px;
+}
+
+.search { position: relative; margin-bottom: 16px; }
+.search input {
+  width: 100%;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono); font-size: 12px;
+  padding: 8px 10px 8px 28px;
+  border-radius: 6px; outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+.search::before {
+  content: "/"; position: absolute;
+  left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--fg-4); font-family: var(--mono); font-size: 12px;
+}
+.search .clear-k {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 10px; color: var(--fg-4);
+}
+
+.side-nav { list-style: none; padding: 0; margin: 0; }
+.side-nav .grp { margin-top: 14px; }
+.side-nav .grp-title {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-2); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.side-nav .grp-title .count { color: var(--fg-4); font-weight: 400; margin-left: auto; }
+.side-nav a {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--fg-3);
+  text-decoration: none;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.side-nav a .dot { color: var(--fg-4); font-size: 10px; }
+.side-nav a:hover { color: var(--fg); }
+.side-nav a.active { color: var(--accent); }
+.side-nav a.hidden { display: none; }
+
+.side-foot {
+  margin-top: 28px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); line-height: 1.6;
+}
+.side-foot a { color: var(--fg-3); text-decoration: none; }
+.side-foot a:hover { color: var(--fg); }
+
+ 
+.main { padding: 36px 56px 80px; max-width: 1040px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 20px; border-bottom: 1px solid var(--line);
+  margin-bottom: 32px;
+}
+.crumbs { font-family: var(--mono); font-size: 11.5px; color: var(--fg-3); }
+.crumbs .sep { color: var(--fg-4); margin: 0 6px; }
+.crumbs .here { color: var(--fg); }
+
+.theme-toggle {
+  display: inline-flex; border: 1px solid var(--line);
+  border-radius: 999px; overflow: hidden;
+  background: var(--bg-1);
+  font-family: var(--mono); font-size: 10.5px;
+}
+.theme-toggle button {
+  all: unset; cursor: pointer;
+  padding: 5px 12px; color: var(--fg-3);
+}
+.theme-toggle button.active { background: var(--fg); color: var(--bg); }
+[data-theme="light"] .theme-toggle button.active { color: var(--bg-1); }
+
+ 
+.mast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px; align-items: end;
+  margin-bottom: 40px;
+  position: relative;
+}
+.mast h1 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 48px; line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px; color: var(--fg);
+}
+.mast h1 .slash { color: var(--accent); }
+.mast p.kicker {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.14em;
+  margin: 0 0 20px;
+}
+.mast p.lede {
+  font-family: var(--sans);
+  font-size: 16px; line-height: 1.55;
+  color: var(--fg-2);
+  margin: 0; max-width: 560px;
+  text-wrap: pretty;
+}
+.mast .fact {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); text-align: right;
+  line-height: 1.6;
+}
+.mast .fact b { color: var(--fg-2); font-weight: 500; }
+.mast::before {
+  content: "";
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+   
+  background: var(--bloom, radial-gradient(closest-side,
+      color-mix(in srgb, var(--accent) 32%, transparent),
+      color-mix(in srgb, var(--accent) 14%, transparent) 45%,
+      transparent 72%));
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: 0;
+}
+.mast > * { position: relative; z-index: 1; }
+
+ 
+.section { margin-bottom: 72px; }
+.section-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.section-num {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); letter-spacing: 0.1em;
+}
+.section-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 24px; letter-spacing: -0.01em; color: var(--fg);
+}
+.section-blurb {
+  font-family: var(--sans); font-size: 13px;
+  color: var(--fg-3);
+  max-width: 440px; text-align: right; justify-self: end;
+}
+.section.empty { display: none; }
+
+ 
+.entry {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 28px;
+  padding: 24px 0 36px;
+  border-top: 1px dashed var(--line);
+}
+.entry-term { min-width: 0; }  
+.entry:first-child { border-top: 0; padding-top: 8px; }
+.entry-meta .id {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.entry-meta h4 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 15px; line-height: 1.25;
+  color: var(--fg); margin: 0 0 8px;
+}
+.entry-meta p {
+  font-family: var(--sans); font-size: 12.5px;
+  line-height: 1.55; color: var(--fg-3);
+  margin: 0 0 10px; text-wrap: pretty;
+}
+.entry-meta .tags {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--fg-4);
+}
+.entry-meta .tags span {
+  padding: 2px 6px; border: 1px solid var(--line); border-radius: 3px;
+}
+.entry.hidden { display: none; }
+
+.experimental-pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 3px;
+  padding: 0 5px; margin-left: 6px; vertical-align: 2px;
+}
+
+ 
+.term {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+  color: var(--fg);
+  overflow: hidden;
+  position: relative;
+}
+.term-head {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 11.5px; color: var(--fg-3);
+  letter-spacing: 0.02em;
+}
+.term-dots { display: inline-flex; gap: 6px; }
+.term-dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line-2); display: inline-block;
+}
+.term-dots i:nth-child(1) { background: oklch(0.70 0.14 25); }
+.term-dots i:nth-child(2) { background: oklch(0.80 0.13 85); }
+.term-dots i:nth-child(3) { background: oklch(0.75 0.13 150); }
+.term-title {
+  flex: 1; text-align: center;
+  font-size: 11px; color: var(--fg-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.term-head-pad { width: 42px; }
+.term-prompt {
+  padding: 12px 16px 8px;
+  font-size: 12.5px;
+  color: var(--fg-3);
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 10px;
+}
+.term-prompt .p { color: var(--green); }
+.term-prompt .cmd { color: var(--fg); }
+.term-body {
+  padding: 4px 16px 16px;
+  font-size: 12.5px; line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0;
+}
+.term-body.no-prompt { padding-top: 14px; }
+
+ 
+.term-bold { font-weight: 600; }
+.term-fg2, .term-dim { color: var(--fg-3); }
+.term-italic { font-style: italic; }
+.term-underline { text-decoration: underline; }
+.term-fg30 { color: var(--fg-4); }
+.term-fg31 { color: var(--red); }
+.term-fg32 { color: var(--green); }
+.term-fg33 { color: var(--yellow); }
+.term-fg34 { color: var(--blue); }
+.term-fg35 { color: var(--magenta); }
+.term-fg36 { color: var(--cyan); }
+.term-fg37 { color: var(--fg-2); }
+.term-fg90 { color: var(--fg-3); }
+.term-fg91 { color: var(--red); }
+.term-fg92 { color: var(--green); }
+.term-fg93 { color: var(--yellow); }
+.term-fg94 { color: var(--blue); }
+.term-fg95 { color: var(--magenta); }
+.term-fg96 { color: var(--cyan); }
+.term-fg97 { color: var(--fg); }
+.term-bg40 { background: var(--fg-4); }
+.term-bg41 { background: var(--red); color: var(--bg); }
+.term-bg42 { background: var(--green); color: var(--bg); }
+.term-bg43 { background: var(--yellow); color: var(--bg); }
+.term-bg44 { background: var(--blue); color: var(--bg); }
+.term-bg45 { background: var(--magenta); color: var(--bg); }
+.term-bg46 { background: var(--cyan); color: var(--bg); }
+.term-bg47 { background: var(--fg-2); color: var(--bg); }
+
+ 
+.notes-panel {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  background: color-mix(in oklch, var(--accent) 6%, var(--bg-1));
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 60px;
+}
+[data-theme="light"] .notes-panel {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-1));
+}
+.notes-panel h3 {
+  font-family: var(--mono); font-size: 11px;
+  margin: 0 0 8px;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--accent);
+}
+.notes-panel p {
+  font-family: var(--sans); font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin: 0 0 8px;
+  max-width: 660px;
+  text-wrap: pretty;
+}
+.notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel .mono-hint {
+  font-family: var(--mono); font-size: 11px; color: var(--fg-3);
+}
+.notes-panel .kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+ 
+.foot {
+  margin-top: 60px; padding-top: 24px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
+}
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.attrib {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 0 0;
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-3);
+  flex-wrap: wrap;
+}
+.attrib .dot { color: var(--fg-4); }
+
+ 
+@media (max-width: 1100px) {
+  .page { grid-template-columns: 240px 1fr; }
+  .side { padding: 22px 16px 32px; }
+  .main { padding: 32px 36px 60px; }
+  .mast h1 { font-size: 42px; }
+  .entry { grid-template-columns: 160px 1fr; gap: 22px; }
+}
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; }
+  .side {
+    position: sticky; top: 0; z-index: 15;
+    height: auto;
+    border-right: 0; border-bottom: 1px solid var(--line);
+    padding: 14px 20px 16px;
+    background: var(--bg);
+  }
+  .side-foot { margin-top: 18px; }
+
+   
+  .nav-toggle { display: inline-flex; }
+  .side .side-nav,
+  .side .side-foot { display: none; }
+  .side.nav-open .side-nav { display: block; }
+  .side.nav-open .side-foot { display: block; }
+  .side.nav-open { max-height: 85vh; overflow-y: auto; }
+  .brand { margin-bottom: 12px; }
+  .sidebar-meta { margin-bottom: 10px; }
+  .search { margin-bottom: 0; }
+  .side.nav-open .search { margin-bottom: 14px; }
+  .main { padding: 28px 24px 60px; }
+  .entry { grid-template-columns: 1fr; gap: 14px; padding: 20px 0 28px; }
+  .mast { grid-template-columns: 1fr; gap: 22px; }
+  .mast .fact { text-align: left; }
+  .mast h1 { font-size: 34px; }
+  .mast p.lede { font-size: 15px; }
+  .section-head { grid-template-columns: 1fr; gap: 10px; }
+  .section-blurb { text-align: left; justify-self: start; max-width: none; }
+  .section { margin-bottom: 56px; }
+}
+
+@media (max-width: 600px) {
+  .main { padding: 20px 18px 48px; }
+  .side { padding: 14px 18px 18px; }
+  .brand-name { font-size: 12.5px; }
+  .topbar { flex-wrap: wrap; gap: 10px; padding-bottom: 14px; margin-bottom: 22px; }
+  .crumbs { font-size: 11px; }
+  .theme-toggle button { padding: 7px 14px; font-size: 11px; }
+   
+  .search input { font-size: 16px; padding: 10px 12px 10px 30px; }
+  .search::before { font-size: 14px; }
+  .mast { margin-bottom: 32px; gap: 16px; }
+  .mast h1 { font-size: 28px; letter-spacing: -0.01em; }
+  .mast p.kicker { font-size: 10.5px; margin-bottom: 14px; }
+  .mast p.lede { font-size: 14px; padding-left: 12px; }
+  .mast::before { display: none; }
+  .notes-panel { padding: 14px 16px; margin-bottom: 36px; }
+  .notes-panel p { font-size: 12.5px; }
+  .section { margin-bottom: 44px; }
+  .section-name { font-size: 20px; }
+  .section-head { padding-bottom: 10px; margin-bottom: 18px; }
+  .entry { padding: 16px 0 22px; gap: 10px; }
+  .entry-meta h4 { font-size: 14px; }
+  .entry-meta .id { margin-bottom: 4px; }
+  .entry-meta p { font-size: 12px; }
+  .term { border-radius: 8px; }
+  .term-head { gap: 8px; padding: 8px 12px; font-size: 11px; }
+  .term-head-pad { display: none; }
+  .term-title { font-size: 10.5px; }
+  .term-prompt { padding: 10px 12px 6px; font-size: 12px; }
+  .term-body { font-size: 12px; padding: 4px 12px 14px; }
+  .foot { flex-direction: column; gap: 6px; align-items: flex-start; }
+  .attrib { flex-wrap: wrap; gap: 8px; font-size: 10.5px; padding: 14px 0 0; margin-top: 22px; }
+}
+
+@media (max-width: 420px) {
+  .mast h1 { font-size: 24px; line-height: 1.08; }
+  .section-name { font-size: 18px; }
+  .term-body { font-size: 11.5px; padding: 4px 10px 12px; }
+  .term-prompt { padding: 8px 10px 6px; font-size: 11.5px; }
+  .term-head { padding: 7px 10px; }
+  .entry-meta .tags { gap: 3px; }
+}
+
+ 
+:root,[data-theme="dark"]{--accent:#3FB950}
+[data-theme="light"]{--accent:#3FB950}
+
+
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="side" id="side">
+    <div class="brand">
+      
+      <div class="brand-name">eza — modern ls</div>
+      
+      <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
+        <span class="nav-toggle-icon" aria-hidden="true">☰</span>
+        <span class="nav-toggle-label">menu</span>
+      </button>
+    </div>
+
+    <div class="sidebar-meta">16 screens · 2026-05-01 18:39</div>
+
+    <div class="search">
+      <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
+      <span class="clear-k">/</span>
+    </div>
+
+    <ul class="side-nav" id="sideNav">
+      <li class="grp" data-grp="listing">
+        <div class="grp-title"><span>Listing</span><span class="count">7</span></div>
+        <a href="#basic" data-cmd="basic" data-search="basic default listing  eza corpus">
+          <span class="dot">·</span><span>default listing</span>
+        </a>
+        <a href="#long" data-cmd="long" data-search="long long form  eza corpus -l">
+          <span class="dot">·</span><span>long form</span>
+        </a>
+        <a href="#long-all" data-cmd="long-all" data-search="long-all long with hidden  eza corpus -la">
+          <span class="dot">·</span><span>long with hidden</span>
+        </a>
+        <a href="#header" data-cmd="header" data-search="header with header row  eza corpus -l --header">
+          <span class="dot">·</span><span>with header row</span>
+        </a>
+        <a href="#classify" data-cmd="classify" data-search="classify classify markers  eza corpus --classify=always">
+          <span class="dot">·</span><span>classify markers</span>
+        </a>
+        <a href="#one-per-line" data-cmd="one-per-line" data-search="one-per-line one per line  eza corpus -1 --color=always">
+          <span class="dot">·</span><span>one per line</span>
+        </a>
+        <a href="#grid-long" data-cmd="grid-long" data-search="grid-long grid sort  eza corpus -lx">
+          <span class="dot">·</span><span>grid sort</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="sizes">
+        <div class="grp-title"><span>Sizes</span><span class="count">5</span></div>
+        <a href="#totals" data-cmd="totals" data-search="totals human totals  eza corpus -lh --total-size">
+          <span class="dot">·</span><span>human totals</span>
+        </a>
+        <a href="#by-size" data-cmd="by-size" data-search="by-size sorted by size  eza corpus -ls">
+          <span class="dot">·</span><span>sorted by size</span>
+        </a>
+        <a href="#by-time" data-cmd="by-time" data-search="by-time sorted by time  eza corpus -l --sort=time --reverse">
+          <span class="dot">·</span><span>sorted by time</span>
+        </a>
+        <a href="#rel-times" data-cmd="rel-times" data-search="rel-times relative times  eza corpus -l --time-style=relative">
+          <span class="dot">·</span><span>relative times</span>
+        </a>
+        <a href="#iso-times" data-cmd="iso-times" data-search="iso-times iso timestamps  eza corpus -l --time-style=long-iso">
+          <span class="dot">·</span><span>ISO timestamps</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="tree">
+        <div class="grp-title"><span>Tree</span><span class="count">3</span></div>
+        <a href="#tree" data-cmd="tree" data-search="tree tree (level 2)  eza corpus/ --tree --level=2">
+          <span class="dot">·</span><span>tree (level 2)</span>
+        </a>
+        <a href="#tree-gitignore" data-cmd="tree-gitignore" data-search="tree-gitignore tree respecting .gitignore  eza corpus/ --tree --level=3 --git-ignore">
+          <span class="dot">·</span><span>tree respecting .gitignore</span>
+        </a>
+        <a href="#tree-long" data-cmd="tree-long" data-search="tree-long long tree  eza corpus/ --tree --level=2 -l --no-permissions --no-user">
+          <span class="dot">·</span><span>long tree</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="git">
+        <div class="grp-title"><span>Git</span><span class="count">1</span></div>
+        <a href="#git-status" data-cmd="git-status" data-search="git-status git status column  eza corpus -l --git --git-repos">
+          <span class="dot">·</span><span>git status column</span>
+        </a>
+        
+      </li>
+      
+    </ul>
+
+    <div class="side-foot">
+      <a href="https://github.com/eza-community/eza" target="_blank" rel="noopener">↗ github</a><br>
+      16 screens · 4 groups<br>
+      generated 2026-05-01 18:39
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        <span>eza — modern ls</span><span class="sep">/</span><span class="here">gallery</span>
+      </div>
+      <div class="theme-toggle" role="tablist" aria-label="Theme">
+        <button id="tDark" class="active" aria-pressed="true">dark</button>
+        <button id="tLight" aria-pressed="false">light</button>
+      </div>
+    </header>
+
+    <section class="mast">
+      <div>
+        
+        <h1><span class="slash">/</span> eza — modern ls</h1>
+        
+      </div>
+      
+    </section>
+
+    
+
+    <div>
+      <section class="section" id="section-listing" data-grp="listing">
+        <div class="section-head">
+          <div class="section-num">§ 01</div>
+          <div class="section-name">Listing</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="basic" data-cmd="basic" data-search="basic default listing  eza corpus">
+            <div class="entry-meta">
+              <div class="id">basic</div>
+              <h4>default listing</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus</span></div>
+                <pre class="term-body">action.yml  <span class="term-fg36 term-fg1">examples</span>      go.mod  <span class="term-fg36 term-fg1">internal</span>  PLAN.md    <span class="term-fg33 term-fg1">termbook.go</span>
+<span class="term-fg36 term-fg1">cmd</span>         gallery.html  go.sum  LICENSE   <span class="term-fg33 term-fg1 term-fg4">README.md</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="long" data-cmd="long" data-search="long long form  eza corpus -l">
+            <div class="entry-meta">
+              <div class="id">long</div>
+              <h4>long form</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="long-all" data-cmd="long-all" data-search="long-all long with hidden  eza corpus -la">
+            <div class="entry-meta">
+              <div class="id">long-all</div>
+              <h4>long with hidden</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -la</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -la</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">8.2k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> .DS_Store
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:24</span> <span class="term-fg36 term-fg1">.git</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:20</span> <span class="term-fg36 term-fg1">.github</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:19</span> .goreleaser.yaml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:42</span> <span class="term-fg36 term-fg1">.idea</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="header" data-cmd="header" data-search="header with header row  eza corpus -l --header">
+            <div class="entry-meta">
+              <div class="id">header</div>
+              <h4>with header row</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l --header</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l --header</span></div>
+                <pre class="term-body"><span class="term-fg4">Permissions</span> <span class="term-fg4">Size</span> <span class="term-fg4">User</span> <span class="term-fg4">Date Modified</span> <span class="term-fg4">Name</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:21</span>  action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:37</span>  <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:37</span>  gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:34</span>  <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">18 Apr 14:15</span>  LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 11:55</span>  PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">14 Apr 21:28</span>  <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">18 Apr 16:47</span>  <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="classify" data-cmd="classify" data-search="classify classify markers  eza corpus --classify=always">
+            <div class="entry-meta">
+              <div class="id">classify</div>
+              <h4>classify markers</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus --classify=always</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus --classify=always</span></div>
+                <pre class="term-body">action.yml  <span class="term-fg36 term-fg1">examples</span>&#47;     go.mod  <span class="term-fg36 term-fg1">internal</span>&#47;  PLAN.md    <span class="term-fg33 term-fg1">termbook.go</span>
+<span class="term-fg36 term-fg1">cmd</span>&#47;        gallery.html  go.sum  LICENSE    <span class="term-fg33 term-fg1 term-fg4">README.md</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="one-per-line" data-cmd="one-per-line" data-search="one-per-line one per line  eza corpus -1 --color=always">
+            <div class="entry-meta">
+              <div class="id">one-per-line</div>
+              <h4>one per line</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -1 --color=always</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -1 --color=always</span></div>
+                <pre class="term-body">action.yml
+<span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">examples</span>
+gallery.html
+go.mod
+go.sum
+<span class="term-fg36 term-fg1">internal</span>
+LICENSE
+PLAN.md
+<span class="term-fg33 term-fg1 term-fg4">README.md</span>
+<span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="grid-long" data-cmd="grid-long" data-search="grid-long grid sort  eza corpus -lx">
+            <div class="entry-meta">
+              <div class="id">grid-long</div>
+              <h4>grid sort</h4>
+              
+              <div class="tags"><span>listing</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -lx</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -lx</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-sizes" data-grp="sizes">
+        <div class="section-head">
+          <div class="section-num">§ 02</div>
+          <div class="section-name">Sizes</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="totals" data-cmd="totals" data-search="totals human totals  eza corpus -lh --total-size">
+            <div class="entry-meta">
+              <div class="id">totals</div>
+              <h4>human totals</h4>
+              
+              <div class="tags"><span>sizes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -lh --total-size</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -lh --total-size</span></div>
+                <pre class="term-body"><span class="term-fg4">Permissions</span> <span class="term-fg4">Size</span> <span class="term-fg4">User</span> <span class="term-fg4">Date Modified</span> <span class="term-fg4">Name</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:21</span>  action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@ <span class="term-fg32 term-fg1">6.4k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:37</span>  <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:37</span>  gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 16:09</span>  go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 18:34</span>  <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">18 Apr 14:15</span>  LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34"> 1 May 11:55</span>  PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">14 Apr 21:28</span>  <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span>   <span class="term-fg34">18 Apr 16:47</span>  <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="by-size" data-cmd="by-size" data-search="by-size sorted by size  eza corpus -ls">
+            <div class="entry-meta">
+              <div class="id">by-size</div>
+              <h4>sorted by size</h4>
+              
+              <div class="tags"><span>sizes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -lS</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -lS</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg32 term-fg1">4.1k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span>    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span>    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span>  <span class="term-fg32 term-fg1">29k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg32 term-fg1">4.1k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg32 term-fg1">4.1k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span>    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span>  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span>  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg32 term-fg1">4.1k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span>  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="by-time" data-cmd="by-time" data-search="by-time sorted by time  eza corpus -l --sort=time --reverse">
+            <div class="entry-meta">
+              <div class="id">by-time</div>
+              <h4>sorted by time</h4>
+              
+              <div class="tags"><span>sizes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l --sort=time --reverse</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l --sort=time --reverse</span></div>
+                <pre class="term-body"><span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> gallery.html
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.sum
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="rel-times" data-cmd="rel-times" data-search="rel-times relative times  eza corpus -l --time-style=relative">
+            <div class="entry-meta">
+              <div class="id">rel-times</div>
+              <h4>relative times</h4>
+              
+              <div class="tags"><span>sizes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l --time-style=relative</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l --time-style=relative</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">17 minutes</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2 hours</span>    <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">58 seconds</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">1 minute</span>   gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2 hours</span>    go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2 hours</span>    go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">4 minutes</span>  <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">1 week</span>     LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">6 hours</span>    PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2 weeks</span>    <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">1 week</span>     <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="iso-times" data-cmd="iso-times" data-search="iso-times iso timestamps  eza corpus -l --time-style=long-iso">
+            <div class="entry-meta">
+              <div class="id">iso-times</div>
+              <h4>ISO timestamps</h4>
+              
+              <div class="tags"><span>sizes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l --time-style=long-iso</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l --time-style=long-iso</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 18:21</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 16:09</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 18:37</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 18:37</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 16:09</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 16:09</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 18:34</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-04-18 14:15</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-05-01 11:55</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-04-14 21:28</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">2026-04-18 16:47</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-tree" data-grp="tree">
+        <div class="section-head">
+          <div class="section-num">§ 03</div>
+          <div class="section-name">Tree</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="tree" data-cmd="tree" data-search="tree tree (level 2)  eza corpus/ --tree --level=2">
+            <div class="entry-meta">
+              <div class="id">tree</div>
+              <h4>tree (level 2)</h4>
+              
+              <div class="tags"><span>tree</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus/ --tree --level=2</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus/ --tree --level=2</span></div>
+                <pre class="term-body"><span class="term-fg36 term-fg1">corpus</span>
+<span class="term-fgi90 term-fg1">├── </span>action.yml
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">termbook</span>
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">examples</span>
+<span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">eza</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">ripgrep</span>
+<span class="term-fgi90 term-fg1">├── </span>gallery.html
+<span class="term-fgi90 term-fg1">├── </span>go.mod
+<span class="term-fgi90 term-fg1">├── </span>go.sum
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">internal</span>
+<span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">capture</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">config</span>
+<span class="term-fgi90 term-fg1">├── </span>LICENSE
+<span class="term-fgi90 term-fg1">├── </span>PLAN.md
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg33 term-fg1 term-fg4">README.md</span>
+<span class="term-fgi90 term-fg1">└── </span><span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="tree-gitignore" data-cmd="tree-gitignore" data-search="tree-gitignore tree respecting .gitignore  eza corpus/ --tree --level=3 --git-ignore">
+            <div class="entry-meta">
+              <div class="id">tree-gitignore</div>
+              <h4>tree respecting .gitignore</h4>
+              
+              <div class="tags"><span>tree</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus/ --tree --level=3 --git-ignore</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus/ --tree --level=3 --git-ignore</span></div>
+                <pre class="term-body"><span class="term-fg36 term-fg1">corpus</span>
+<span class="term-fgi90 term-fg1">├── </span>action.yml
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">termbook</span>
+<span class="term-fgi90 term-fg1">│       ├── </span><span class="term-fg33 term-fg1">build.go</span>
+<span class="term-fgi90 term-fg1">│       ├── </span><span class="term-fg33 term-fg1">main.go</span>
+<span class="term-fgi90 term-fg1">│       └── </span><span class="term-fg33 term-fg1">record.go</span>
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">examples</span>
+<span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">eza</span>
+<span class="term-fgi90 term-fg1">│   │   └── </span><span class="term-fg35">corpus</span> <span class="term-fgi90 term-fg1">-&gt;</span> <span class="term-fg36">..&#47;</span><span class="term-fg36 term-fg1">..</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">ripgrep</span>
+<span class="term-fgi90 term-fg1">│       └── </span><span class="term-fg35">corpus</span> <span class="term-fgi90 term-fg1">-&gt;</span> <span class="term-fg36">..&#47;</span><span class="term-fg36 term-fg1">..</span>
+<span class="term-fgi90 term-fg1">├── </span>gallery.html
+<span class="term-fgi90 term-fg1">├── </span>go.mod
+<span class="term-fgi90 term-fg1">├── </span>go.sum
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">internal</span>
+<span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">capture</span>
+<span class="term-fgi90 term-fg1">│   │   └── </span><span class="term-fg33 term-fg1">capture.go</span>
+<span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">config</span>
+<span class="term-fgi90 term-fg1">│       └── </span><span class="term-fg33 term-fg1">config.go</span>
+<span class="term-fgi90 term-fg1">├── </span>LICENSE
+<span class="term-fgi90 term-fg1">├── </span>PLAN.md
+<span class="term-fgi90 term-fg1">├── </span><span class="term-fg33 term-fg1 term-fg4">README.md</span>
+<span class="term-fgi90 term-fg1">└── </span><span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="tree-long" data-cmd="tree-long" data-search="tree-long long tree  eza corpus/ --tree --level=2 -l --no-permissions --no-user">
+            <div class="entry-meta">
+              <div class="id">tree-long</div>
+              <h4>long tree</h4>
+              
+              <div class="tags"><span>tree</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus/ --tree --level=2 -l --no-permissions --no-user</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus/ --tree --level=2 -l --no-permissions --no-user</span></div>
+                <pre class="term-body">   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fg36 term-fg1">corpus</span>
+<span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg34"> 1 May 18:21</span> <span class="term-fgi90 term-fg1">├── </span>action.yml
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">cmd</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:22</span> <span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">termbook</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">examples</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:38</span> <span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">eza</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:38</span> <span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">ripgrep</span>
+ <span class="term-fg32 term-fg1">26k</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fgi90 term-fg1">├── </span>gallery.html
+ <span class="term-fg32">339</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">├── </span>go.mod
+<span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">├── </span>go.sum
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fgi90 term-fg1">├── </span><span class="term-fg36 term-fg1">internal</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:22</span> <span class="term-fgi90 term-fg1">│   ├── </span><span class="term-fg36 term-fg1">capture</span>
+   <span class="term-fgi90 term-fg1">-</span> <span class="term-fg34"> 1 May 18:22</span> <span class="term-fgi90 term-fg1">│   └── </span><span class="term-fg36 term-fg1">config</span>
+ <span class="term-fg32 term-fg1">11k</span> <span class="term-fg34">18 Apr 14:15</span> <span class="term-fgi90 term-fg1">├── </span>LICENSE
+ <span class="term-fg32 term-fg1">11k</span> <span class="term-fg34"> 1 May 11:55</span> <span class="term-fgi90 term-fg1">├── </span>PLAN.md
+<span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fgi90 term-fg1">├── </span><span class="term-fg33 term-fg1 term-fg4">README.md</span>
+ <span class="term-fg32 term-fg1">12k</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fgi90 term-fg1">└── </span><span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-git" data-grp="git">
+        <div class="section-head">
+          <div class="section-num">§ 04</div>
+          <div class="section-name">Git</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="git-status" data-cmd="git-status" data-search="git-status git status column  eza corpus -l --git --git-repos">
+            <div class="entry-meta">
+              <div class="id">git-status</div>
+              <h4>git status column</h4>
+              
+              <div class="tags"><span>git</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">eza corpus -l --git --git-repos</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">eza corpus -l --git --git-repos</span></div>
+                <pre class="term-body">.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.7k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:21</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> action.yml
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fg36 term-fg1">cmd</span>
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fgi90 term-fg1">-</span><span class="term-fg32">N</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fg36 term-fg1">examples</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">26k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:37</span> <span class="term-fgi90 term-fg1">-</span><span class="term-fg34">M</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> gallery.html
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32">339</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> go.mod
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">1.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 16:09</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> go.sum
+<span class="term-fg36 term-fg1">d</span><span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fg32 term-fg1">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg32">x</span>@    <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 18:34</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fg36 term-fg1">internal</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 14:15</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> LICENSE
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">11k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34"> 1 May 11:55</span> <span class="term-fgi90 term-fg1">-</span><span class="term-fg32">N</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> PLAN.md
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@ <span class="term-fg32 term-fg1">2.4k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">14 Apr 21:28</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1 term-fg4">README.md</span>
+.<span class="term-fg33 term-fg1">r</span><span class="term-fg31 term-fg1">w</span><span class="term-fgi90 term-fg1">-</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span><span class="term-fg33">r</span><span class="term-fgi90 term-fg1">--</span>@  <span class="term-fg32 term-fg1">12k</span> <span class="term-fg33 term-fg1">tv</span> <span class="term-fg34">18 Apr 16:47</span> <span class="term-fgi90 term-fg1">--</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fgi90 term-fg1">-</span> <span class="term-fg33 term-fg1">termbook.go</span></pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      
+    </div>
+
+    <footer class="foot">
+      <div>generated with <a href="https://github.com/tiulpin/termbook">termbook</a></div>
+      <div>16 screens · 2026-05-01 18:39</div>
+    </footer>
+    
+  </main>
+</div>
+
+<script>
+(function(){
+  var D = document.documentElement;
+  var saved = localStorage.getItem('termbook-theme');
+  if (saved) D.setAttribute('data-theme', saved);
+  var tDark = document.getElementById('tDark');
+  var tLight = document.getElementById('tLight');
+  function sync(){
+    var t = D.getAttribute('data-theme');
+    tDark.classList.toggle('active', t === 'dark');
+    tLight.classList.toggle('active', t === 'light');
+    tDark.setAttribute('aria-pressed', t === 'dark');
+    tLight.setAttribute('aria-pressed', t === 'light');
+  }
+  sync();
+  function set(t){ D.setAttribute('data-theme', t); localStorage.setItem('termbook-theme', t); sync(); }
+  tDark.addEventListener('click', function(){ set('dark'); });
+  tLight.addEventListener('click', function(){ set('light'); });
+  function toggleTheme(){ set(D.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+  var q = document.getElementById('q');
+  function updateFilter(){
+    var v = q.value.trim().toLowerCase();
+    document.querySelectorAll('.entry').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.side-nav a').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.section').forEach(function(sec){
+      var visible = sec.querySelectorAll('.entry:not(.hidden)').length;
+      sec.classList.toggle('empty', visible === 0);
+    });
+    document.querySelectorAll('.side-nav .grp').forEach(function(grp){
+      var visible = grp.querySelectorAll('a:not(.hidden)').length;
+      grp.style.display = visible ? '' : 'none';
+    });
+  }
+  q.addEventListener('input', updateFilter);
+
+  var sideEl = document.getElementById('side');
+  var navToggle = document.getElementById('navToggle');
+  function setNavOpen(open){
+    sideEl.classList.toggle('nav-open', open);
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var icon = navToggle.querySelector('.nav-toggle-icon');
+    var label = navToggle.querySelector('.nav-toggle-label');
+    if (icon) icon.textContent = open ? '✕' : '☰';
+    if (label) label.textContent = open ? 'close' : 'menu';
+  }
+  navToggle.addEventListener('click', function(){
+    setNavOpen(!sideEl.classList.contains('nav-open'));
+  });
+   
+  q.addEventListener('focus', function(){
+    if (window.matchMedia('(max-width: 900px)').matches) setNavOpen(true);
+  });
+   
+  sideEl.addEventListener('click', function(e){
+    if (e.target.closest('.side-nav a') && window.matchMedia('(max-width: 900px)').matches) {
+      setNavOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT') {
+      if (e.key === 'Escape') { q.value = ''; q.blur(); updateFilter(); }
+      return;
+    }
+    if (e.key === '/') { e.preventDefault(); q.focus(); }
+    else if (e.key === 't' || e.key === 'T') { toggleTheme(); }
+  });
+
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      var link = document.querySelector('.side-nav a[data-cmd="' + e.target.id + '"]');
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('.entry[id]').forEach(function(el){ obs.observe(el); });
+})();
+</script>
+</body>
+</html>

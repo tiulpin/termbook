@@ -1,0 +1,4 @@
+{"type":"begin","data":{"path":{"text":"corpus/termbook.go"}}}
+{"type":"match","data":{"path":{"text":"corpus/termbook.go"},"lines":{"text":"func New(title string, opts ...Option) *Book {\n"},"line_number":227,"absolute_offset":7328,"submatches":[{"match":{"text":"func New"},"start":0,"end":8}]}}
+{"type":"end","data":{"path":{"text":"corpus/termbook.go"},"binary_offset":null,"stats":{"elapsed":{"secs":0,"nanos":10792,"human":"0.000011s"},"searches":1,"searches_with_match":1,"bytes_searched":7375,"bytes_printed":298,"matched_lines":1,"matches":1}}}
+{"data":{"elapsed_total":{"human":"0.001910s","nanos":1909542,"secs":0},"stats":{"bytes_printed":298,"bytes_searched":73955,"elapsed":{"human":"0.000054s","nanos":53835,"secs":0},"matched_lines":1,"matches":1,"searches":13,"searches_with_match":1}},"type":"summary"}

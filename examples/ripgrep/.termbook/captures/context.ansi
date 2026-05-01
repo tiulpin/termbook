@@ -1,0 +1,41 @@
+[0m[35mcorpus/cmd/termbook/main.go[0m
+[0m[32m11[0m-
+[0m[32m12[0m-func main() {
+[0m[32m13[0m:	root := &[0m[1m[31mcobra.Command[0m{
+[0m[32m14[0m-		Use:           "termbook",
+[0m[32m15[0m-		Short:         "Beautiful, browsable reference pages for your CLI",
+
+[0m[35mcorpus/cmd/termbook/record.go[0m
+[0m[32m16[0m-)
+[0m[32m17[0m-
+[0m[32m18[0m:func newRecordCmd() *[0m[1m[31mcobra.Command[0m {
+[0m[32m19[0m-	var (
+[0m[32m20[0m-		id      string
+--
+[0m[32m26[0m-		only    string
+[0m[32m27[0m-	)
+[0m[32m28[0m:	cmd := &[0m[1m[31mcobra.Command[0m{
+[0m[32m29[0m-		Use:   "record [command...]",
+[0m[32m30[0m-		Short: "Capture a command's output and add it to the manifest",
+--
+[0m[32m35[0m-its capture file without changing the manifest.`,
+[0m[32m36[0m-		Args: cobra.ArbitraryArgs,
+[0m[32m37[0m:		RunE: func(cc *[0m[1m[31mcobra.Command[0m, args []string) error {
+[0m[32m38[0m-			workdir, err := os.Getwd()
+[0m[32m39[0m-			if err != nil {
+
+[0m[35mcorpus/cmd/termbook/build.go[0m
+[0m[32m12[0m-)
+[0m[32m13[0m-
+[0m[32m14[0m:func newBuildCmd() *[0m[1m[31mcobra.Command[0m {
+[0m[32m15[0m-	var (
+[0m[32m16[0m-		output string
+[0m[32m17[0m-		only   string
+[0m[32m18[0m-	)
+[0m[32m19[0m:	cmd := &[0m[1m[31mcobra.Command[0m{
+[0m[32m20[0m-		Use:   "build",
+[0m[32m21[0m-		Short: "Render gallery.html from the manifest and captures",
+[0m[32m22[0m-		Args:  cobra.NoArgs,
+[0m[32m23[0m:		RunE: func(cc *[0m[1m[31mcobra.Command[0m, _ []string) error {
+[0m[32m24[0m-			workdir, err := os.Getwd()
+[0m[32m25[0m-			if err != nil {
