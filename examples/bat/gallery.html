@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>bat — cat with wings</title>
+<title>bat – cat with wings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains&#43;Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
@@ -416,6 +416,16 @@ body {
   text-wrap: pretty;
 }
 .notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel a {
+  color: var(--fg-1);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 50%, transparent);
+  transition: color 0.15s, border-color 0.15s;
+}
+.notes-panel a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .notes-panel .mono-hint {
   font-family: var(--mono); font-size: 11px; color: var(--fg-3);
 }
@@ -547,7 +557,7 @@ body {
   <aside class="side" id="side">
     <div class="brand">
       
-      <div class="brand-name">bat — cat with wings</div>
+      <div class="brand-name">bat – cat with wings</div>
       
       <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
         <span class="nav-toggle-icon" aria-hidden="true">☰</span>
@@ -555,7 +565,7 @@ body {
       </button>
     </div>
 
-    <div class="sidebar-meta">14 screens · 2026-05-01 18:46</div>
+    <div class="sidebar-meta">14 screens · 2026-05-01 19:09</div>
 
     <div class="search">
       <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
@@ -627,14 +637,15 @@ body {
     <div class="side-foot">
       <a href="https://github.com/sharkdp/bat" target="_blank" rel="noopener">↗ github</a><br>
       14 screens · 4 groups<br>
-      generated 2026-05-01 18:46
+      generated 2026-05-01 19:09<br>
+      with <a href="https://github.com/tiulpin/termbook" target="_blank" rel="noopener">termbook</a>
     </div>
   </aside>
 
   <main class="main">
     <header class="topbar">
       <div class="crumbs">
-        <span>bat — cat with wings</span><span class="sep">/</span><span class="here">gallery</span>
+        <span>bat – cat with wings</span><span class="sep">/</span><span class="here">gallery</span>
       </div>
       <div class="theme-toggle" role="tablist" aria-label="Theme">
         <button id="tDark" class="active" aria-pressed="true">dark</button>
@@ -645,7 +656,7 @@ body {
     <section class="mast">
       <div>
         
-        <h1><span class="slash">/</span> bat — cat with wings</h1>
+        <h1><span class="slash">/</span> bat – cat with wings</h1>
         
       </div>
       
@@ -1577,7 +1588,7 @@ import (
 
     <footer class="foot">
       <div>generated with <a href="https://github.com/tiulpin/termbook">termbook</a></div>
-      <div>14 screens · 2026-05-01 18:46</div>
+      <div>14 screens · 2026-05-01 19:09</div>
     </footer>
     
   </main>

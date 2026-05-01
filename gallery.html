@@ -422,6 +422,16 @@ body {
   text-wrap: pretty;
 }
 .notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel a {
+  color: var(--fg-1);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--accent) 50%, transparent);
+  transition: color 0.15s, border-color 0.15s;
+}
+.notes-panel a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .notes-panel .mono-hint {
   font-family: var(--mono); font-size: 11px; color: var(--fg-3);
 }
@@ -585,7 +595,8 @@ body {
     <div class="side-foot">
       {{if .GitHubURL}}<a href="{{.GitHubURL}}" target="_blank" rel="noopener">↗ github</a><br>{{end}}
       {{.ScreenCount}} screens · {{len .Categories}} groups<br>
-      generated {{.Generated}}
+      generated {{.Generated}}<br>
+      with <a href="https://github.com/tiulpin/termbook" target="_blank" rel="noopener">termbook</a>
     </div>
   </aside>
 
