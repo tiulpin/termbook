@@ -7,6 +7,13 @@ Captures ANSI-colored output and renders it as a static page with a grid layout,
 <img width="3892" height="2196" alt="cli" src="https://github.com/user-attachments/assets/da17c2db-f739-400e-9dd3-d597020f00eb" />
 
 
+## Examples
+
+- [eza — modern ls](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/eza/gallery.html)
+- [ripgrep — fast recursive search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/ripgrep/gallery.html)
+
+Manifests live under [`examples/`](examples/); each one is a `.termbook/termbook.yml` plus committed `*.ansi` captures.
+
 ## Usage
 
 ```go
