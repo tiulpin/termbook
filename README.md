@@ -9,9 +9,10 @@ Captures ANSI-colored output and renders it as a static page with a grid layout,
 
 ## Examples
 
-- [bat — cat with wings](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/bat/gallery.html)
-- [eza — modern ls](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/eza/gallery.html)
-- [ripgrep — fast recursive search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/ripgrep/gallery.html)
+- [bat – cat with wings](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/bat/gallery.html)
+- [eza – modern ls](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/eza/gallery.html)
+- [ripgrep – fast recursive search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/ripgrep/gallery.html)
+- [teamcity cli](https://jetbrains.github.io/teamcity-cli/)
 
 Manifests live under [`examples/`](examples/); each one is a `.termbook/termbook.yml` plus committed `*.ansi` captures.
 
@@ -33,7 +34,7 @@ termbook record "kubectl describe pod web-0" --id describe-pod --cat Pods
 termbook build
 ```
 
-The first `record` scaffolds `.termbook/termbook.yml`. Captures land in `.termbook/captures/<id>.ansi`. Commit them or don't — `build` works either way, so a teammate without access to the tool you're documenting can still rebuild the page.
+The first `record` scaffolds `.termbook/termbook.yml`. Captures land in `.termbook/captures/<id>.ansi`. Commit them or don't – `build` works either way, so a teammate without access to the tool you're documenting can still rebuild the page.
 
 ## Manifest
 
@@ -85,7 +86,7 @@ The action installs the released binary and runs `build` against committed captu
 For programmatic capture in Go:
 
 ```go
-book := termbook.New("mycli — screen gallery",
+book := termbook.New("mycli – screen gallery",
     termbook.WithGitHub("https://github.com/you/mycli"),
 )
 
@@ -118,5 +119,5 @@ termbook.WithTemplate(myHTML)
 
 ## See also
 
-- [terminal-to-html](https://github.com/buildkite/terminal-to-html) by Buildkite — standalone CLI to convert ANSI terminal output to HTML
-- [VHS](https://github.com/charmbracelet/vhs) by Charm — record terminal sessions as GIFs/MP4s from tape files
+- [terminal-to-html](https://github.com/buildkite/terminal-to-html) by Buildkite – standalone CLI to convert ANSI terminal output to HTML
+- [VHS](https://github.com/charmbracelet/vhs) by Charm – record terminal sessions as GIFs/MP4s from tape files
