@@ -1,0 +1,59 @@
+title: bat — cat with wings
+accent: "#F4BF4F"
+github: https://github.com/sharkdp/bat
+width: 120
+categories:
+  - name: Languages
+    id: languages
+    screens:
+      - id: go-file
+        title: Go source
+        command: bat --paging=never --color=always corpus/termbook.go | head -50
+      - id: markdown
+        title: Markdown
+        command: bat --paging=never --color=always corpus/README.md
+      - id: yaml
+        title: YAML
+        command: bat --paging=never --color=always corpus/action.yml
+      - id: html
+        title: HTML / CSS / JS
+        command: bat --paging=never --color=always corpus/gallery.html | head -60
+      - id: multi
+        title: two files
+        command: bat --paging=never --color=always corpus/go.mod corpus/go.sum
+  - name: Style
+    id: style
+    screens:
+      - id: plain
+        title: plain (no decorations)
+        command: bat --paging=never --color=always --plain corpus/cmd/termbook/main.go
+      - id: numbers
+        title: numbers only
+        command: bat --paging=never --color=always --style=numbers corpus/cmd/termbook/main.go
+      - id: full
+        title: full decorations
+        command: bat --paging=never --color=always --style=full corpus/cmd/termbook/build.go | head -50
+      - id: grid
+        title: grid + header
+        command: bat --paging=never --color=always --style=grid,numbers,header corpus/cmd/termbook/record.go | head -40
+  - name: Slice
+    id: slice
+    screens:
+      - id: line-range
+        title: line range 1:30
+        command: bat --paging=never --color=always --line-range=1:30 corpus/termbook.go
+      - id: highlight
+        title: highlight lines
+        command: bat --paging=never --color=always --highlight-line=10:20 corpus/cmd/termbook/main.go
+  - name: Themes
+    id: themes
+    screens:
+      - id: theme-dracula
+        title: Dracula
+        command: bat --paging=never --color=always --theme=Dracula corpus/cmd/termbook/main.go | head -30
+      - id: theme-nord
+        title: Nord
+        command: bat --paging=never --color=always --theme=Nord corpus/cmd/termbook/main.go | head -30
+      - id: theme-solarized
+        title: Solarized dark
+        command: bat --paging=never --color=always --theme='Solarized (dark)' corpus/cmd/termbook/main.go | head -30

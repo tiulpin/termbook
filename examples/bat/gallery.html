@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bat — cat with wings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains&#43;Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+:root {
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+:root, [data-theme="dark"] {
+  --bg: #0b0d10; --bg-1: #111419; --bg-2: #161a20; --bg-3: #1c2128;
+  --line: #242a33; --line-2: #2f3742;
+  --fg: #e6e8eb; --fg-2: #b6bcc5; --fg-3: #7d8693; --fg-4: #4a525d;
+  --green:  oklch(0.78 0.14 150);
+  --red:    oklch(0.72 0.17 25);
+  --yellow: oklch(0.82 0.15 85);
+  --cyan:   oklch(0.80 0.12 210);
+  --blue:   oklch(0.74 0.14 240);
+  --magenta:oklch(0.74 0.15 330);
+  --accent: oklch(0.82 0.15 85);
+}
+[data-theme="light"] {
+  --bg: #f6f5f1; --bg-1: #ffffff; --bg-2: #ecebe6; --bg-3: #e1dfd8;
+  --line: #d6d4cc; --line-2: #bcb9ae;
+  --fg: #17191c; --fg-2: #2e3238; --fg-3: #5a6069; --fg-4: #8e949d;
+  --green:  oklch(0.55 0.16 145);
+  --red:    oklch(0.55 0.20 25);
+  --yellow: oklch(0.58 0.16 75);
+  --cyan:   oklch(0.52 0.13 220);
+  --blue:   oklch(0.48 0.17 250);
+  --magenta:oklch(0.50 0.18 330);
+  --accent: oklch(0.55 0.16 75);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+ 
+.page {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+@media (min-width: 1441px) {
+  .page { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+}
+
+ 
+.side {
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  position: sticky; top: 0;
+  height: 100vh; overflow-y: auto;
+  padding: 28px 22px 40px;
+   
+  scrollbar-width: none;
+}
+.side::-webkit-scrollbar { display: none; }
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 22px;
+}
+.brand-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 13px; letter-spacing: 0.01em;
+}
+.brand-ver {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); margin-left: auto;
+}
+.nav-toggle {
+  display: none;
+  align-items: center; gap: 6px;
+  margin-left: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.nav-toggle:hover { color: var(--fg); border-color: var(--line-2); }
+.nav-toggle-icon { font-size: 13px; line-height: 1; }
+
+.sidebar-meta {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px;
+}
+
+.search { position: relative; margin-bottom: 16px; }
+.search input {
+  width: 100%;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono); font-size: 12px;
+  padding: 8px 10px 8px 28px;
+  border-radius: 6px; outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+.search::before {
+  content: "/"; position: absolute;
+  left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--fg-4); font-family: var(--mono); font-size: 12px;
+}
+.search .clear-k {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 10px; color: var(--fg-4);
+}
+
+.side-nav { list-style: none; padding: 0; margin: 0; }
+.side-nav .grp { margin-top: 14px; }
+.side-nav .grp-title {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-2); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 6px 0 4px;
+  border-top: 1px solid var(--line);
+}
+.side-nav .grp-title .count { color: var(--fg-4); font-weight: 400; margin-left: auto; }
+.side-nav a {
+  display: flex; align-items: baseline; gap: 8px;
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--fg-3);
+  text-decoration: none;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.side-nav a .dot { color: var(--fg-4); font-size: 10px; }
+.side-nav a:hover { color: var(--fg); }
+.side-nav a.active { color: var(--accent); }
+.side-nav a.hidden { display: none; }
+
+.side-foot {
+  margin-top: 28px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); line-height: 1.6;
+}
+.side-foot a { color: var(--fg-3); text-decoration: none; }
+.side-foot a:hover { color: var(--fg); }
+
+ 
+.main { padding: 36px 56px 80px; max-width: 1040px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 20px; border-bottom: 1px solid var(--line);
+  margin-bottom: 32px;
+}
+.crumbs { font-family: var(--mono); font-size: 11.5px; color: var(--fg-3); }
+.crumbs .sep { color: var(--fg-4); margin: 0 6px; }
+.crumbs .here { color: var(--fg); }
+
+.theme-toggle {
+  display: inline-flex; border: 1px solid var(--line);
+  border-radius: 999px; overflow: hidden;
+  background: var(--bg-1);
+  font-family: var(--mono); font-size: 10.5px;
+}
+.theme-toggle button {
+  all: unset; cursor: pointer;
+  padding: 5px 12px; color: var(--fg-3);
+}
+.theme-toggle button.active { background: var(--fg); color: var(--bg); }
+[data-theme="light"] .theme-toggle button.active { color: var(--bg-1); }
+
+ 
+.mast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px; align-items: end;
+  margin-bottom: 40px;
+  position: relative;
+}
+.mast h1 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 48px; line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px; color: var(--fg);
+}
+.mast h1 .slash { color: var(--accent); }
+.mast p.kicker {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.14em;
+  margin: 0 0 20px;
+}
+.mast p.lede {
+  font-family: var(--sans);
+  font-size: 16px; line-height: 1.55;
+  color: var(--fg-2);
+  margin: 0; max-width: 560px;
+  text-wrap: pretty;
+}
+.mast .fact {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); text-align: right;
+  line-height: 1.6;
+}
+.mast .fact b { color: var(--fg-2); font-weight: 500; }
+.mast::before {
+  content: "";
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+   
+  background: var(--bloom, radial-gradient(closest-side,
+      color-mix(in srgb, var(--accent) 32%, transparent),
+      color-mix(in srgb, var(--accent) 14%, transparent) 45%,
+      transparent 72%));
+  filter: blur(2px);
+  pointer-events: none;
+  z-index: 0;
+}
+.mast > * { position: relative; z-index: 1; }
+
+ 
+.section { margin-bottom: 72px; }
+.section-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px; align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.section-num {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-4); letter-spacing: 0.1em;
+}
+.section-name {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 24px; letter-spacing: -0.01em; color: var(--fg);
+}
+.section-blurb {
+  font-family: var(--sans); font-size: 13px;
+  color: var(--fg-3);
+  max-width: 440px; text-align: right; justify-self: end;
+}
+.section.empty { display: none; }
+
+ 
+.entry {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 28px;
+  padding: 24px 0 36px;
+  border-top: 1px dashed var(--line);
+}
+.entry-term { min-width: 0; }  
+.entry:first-child { border-top: 0; padding-top: 8px; }
+.entry-meta .id {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4); letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.entry-meta h4 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 15px; line-height: 1.25;
+  color: var(--fg); margin: 0 0 8px;
+}
+.entry-meta p {
+  font-family: var(--sans); font-size: 12.5px;
+  line-height: 1.55; color: var(--fg-3);
+  margin: 0 0 10px; text-wrap: pretty;
+}
+.entry-meta .tags {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--fg-4);
+}
+.entry-meta .tags span {
+  padding: 2px 6px; border: 1px solid var(--line); border-radius: 3px;
+}
+.entry.hidden { display: none; }
+
+.experimental-pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 3px;
+  padding: 0 5px; margin-left: 6px; vertical-align: 2px;
+}
+
+ 
+.term {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--mono);
+  color: var(--fg);
+  overflow: hidden;
+  position: relative;
+}
+.term-head {
+  display: flex; align-items: center;
+  gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 11.5px; color: var(--fg-3);
+  letter-spacing: 0.02em;
+}
+.term-dots { display: inline-flex; gap: 6px; }
+.term-dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line-2); display: inline-block;
+}
+.term-dots i:nth-child(1) { background: oklch(0.70 0.14 25); }
+.term-dots i:nth-child(2) { background: oklch(0.80 0.13 85); }
+.term-dots i:nth-child(3) { background: oklch(0.75 0.13 150); }
+.term-title {
+  flex: 1; text-align: center;
+  font-size: 11px; color: var(--fg-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.term-head-pad { width: 42px; }
+.term-prompt {
+  padding: 12px 16px 8px;
+  font-size: 12.5px;
+  color: var(--fg-3);
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 10px;
+}
+.term-prompt .p { color: var(--green); }
+.term-prompt .cmd { color: var(--fg); }
+.term-body {
+  padding: 4px 16px 16px;
+  font-size: 12.5px; line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0;
+}
+.term-body.no-prompt { padding-top: 14px; }
+
+ 
+.term-bold { font-weight: 600; }
+.term-fg2, .term-dim { color: var(--fg-3); }
+.term-italic { font-style: italic; }
+.term-underline { text-decoration: underline; }
+.term-fg30 { color: var(--fg-4); }
+.term-fg31 { color: var(--red); }
+.term-fg32 { color: var(--green); }
+.term-fg33 { color: var(--yellow); }
+.term-fg34 { color: var(--blue); }
+.term-fg35 { color: var(--magenta); }
+.term-fg36 { color: var(--cyan); }
+.term-fg37 { color: var(--fg-2); }
+.term-fg90 { color: var(--fg-3); }
+.term-fg91 { color: var(--red); }
+.term-fg92 { color: var(--green); }
+.term-fg93 { color: var(--yellow); }
+.term-fg94 { color: var(--blue); }
+.term-fg95 { color: var(--magenta); }
+.term-fg96 { color: var(--cyan); }
+.term-fg97 { color: var(--fg); }
+.term-bg40 { background: var(--fg-4); }
+.term-bg41 { background: var(--red); color: var(--bg); }
+.term-bg42 { background: var(--green); color: var(--bg); }
+.term-bg43 { background: var(--yellow); color: var(--bg); }
+.term-bg44 { background: var(--blue); color: var(--bg); }
+.term-bg45 { background: var(--magenta); color: var(--bg); }
+.term-bg46 { background: var(--cyan); color: var(--bg); }
+.term-bg47 { background: var(--fg-2); color: var(--bg); }
+
+ 
+.notes-panel {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  background: color-mix(in oklch, var(--accent) 6%, var(--bg-1));
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 60px;
+}
+[data-theme="light"] .notes-panel {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-1));
+}
+.notes-panel h3 {
+  font-family: var(--mono); font-size: 11px;
+  margin: 0 0 8px;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--accent);
+}
+.notes-panel p {
+  font-family: var(--sans); font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin: 0 0 8px;
+  max-width: 660px;
+  text-wrap: pretty;
+}
+.notes-panel p:last-child { margin-bottom: 0; }
+.notes-panel .mono-hint {
+  font-family: var(--mono); font-size: 11px; color: var(--fg-3);
+}
+.notes-panel .kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-3);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+ 
+.foot {
+  margin-top: 60px; padding-top: 24px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
+}
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.attrib {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 0 0;
+  margin-top: 32px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px;
+  color: var(--fg-3);
+  flex-wrap: wrap;
+}
+.attrib .dot { color: var(--fg-4); }
+
+ 
+@media (max-width: 1100px) {
+  .page { grid-template-columns: 240px 1fr; }
+  .side { padding: 22px 16px 32px; }
+  .main { padding: 32px 36px 60px; }
+  .mast h1 { font-size: 42px; }
+  .entry { grid-template-columns: 160px 1fr; gap: 22px; }
+}
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; }
+  .side {
+    position: sticky; top: 0; z-index: 15;
+    height: auto;
+    border-right: 0; border-bottom: 1px solid var(--line);
+    padding: 14px 20px 16px;
+    background: var(--bg);
+  }
+  .side-foot { margin-top: 18px; }
+
+   
+  .nav-toggle { display: inline-flex; }
+  .side .side-nav,
+  .side .side-foot { display: none; }
+  .side.nav-open .side-nav { display: block; }
+  .side.nav-open .side-foot { display: block; }
+  .side.nav-open { max-height: 85vh; overflow-y: auto; }
+  .brand { margin-bottom: 12px; }
+  .sidebar-meta { margin-bottom: 10px; }
+  .search { margin-bottom: 0; }
+  .side.nav-open .search { margin-bottom: 14px; }
+  .main { padding: 28px 24px 60px; }
+  .entry { grid-template-columns: 1fr; gap: 14px; padding: 20px 0 28px; }
+  .mast { grid-template-columns: 1fr; gap: 22px; }
+  .mast .fact { text-align: left; }
+  .mast h1 { font-size: 34px; }
+  .mast p.lede { font-size: 15px; }
+  .section-head { grid-template-columns: 1fr; gap: 10px; }
+  .section-blurb { text-align: left; justify-self: start; max-width: none; }
+  .section { margin-bottom: 56px; }
+}
+
+@media (max-width: 600px) {
+  .main { padding: 20px 18px 48px; }
+  .side { padding: 14px 18px 18px; }
+  .brand-name { font-size: 12.5px; }
+  .topbar { flex-wrap: wrap; gap: 10px; padding-bottom: 14px; margin-bottom: 22px; }
+  .crumbs { font-size: 11px; }
+  .theme-toggle button { padding: 7px 14px; font-size: 11px; }
+   
+  .search input { font-size: 16px; padding: 10px 12px 10px 30px; }
+  .search::before { font-size: 14px; }
+  .mast { margin-bottom: 32px; gap: 16px; }
+  .mast h1 { font-size: 28px; letter-spacing: -0.01em; }
+  .mast p.kicker { font-size: 10.5px; margin-bottom: 14px; }
+  .mast p.lede { font-size: 14px; padding-left: 12px; }
+  .mast::before { display: none; }
+  .notes-panel { padding: 14px 16px; margin-bottom: 36px; }
+  .notes-panel p { font-size: 12.5px; }
+  .section { margin-bottom: 44px; }
+  .section-name { font-size: 20px; }
+  .section-head { padding-bottom: 10px; margin-bottom: 18px; }
+  .entry { padding: 16px 0 22px; gap: 10px; }
+  .entry-meta h4 { font-size: 14px; }
+  .entry-meta .id { margin-bottom: 4px; }
+  .entry-meta p { font-size: 12px; }
+  .term { border-radius: 8px; }
+  .term-head { gap: 8px; padding: 8px 12px; font-size: 11px; }
+  .term-head-pad { display: none; }
+  .term-title { font-size: 10.5px; }
+  .term-prompt { padding: 10px 12px 6px; font-size: 12px; }
+  .term-body { font-size: 12px; padding: 4px 12px 14px; }
+  .foot { flex-direction: column; gap: 6px; align-items: flex-start; }
+  .attrib { flex-wrap: wrap; gap: 8px; font-size: 10.5px; padding: 14px 0 0; margin-top: 22px; }
+}
+
+@media (max-width: 420px) {
+  .mast h1 { font-size: 24px; line-height: 1.08; }
+  .section-name { font-size: 18px; }
+  .term-body { font-size: 11.5px; padding: 4px 10px 12px; }
+  .term-prompt { padding: 8px 10px 6px; font-size: 11.5px; }
+  .term-head { padding: 7px 10px; }
+  .entry-meta .tags { gap: 3px; }
+}
+
+ 
+:root,[data-theme="dark"]{--accent:#F4BF4F}
+[data-theme="light"]{--accent:#F4BF4F}
+
+
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="side" id="side">
+    <div class="brand">
+      
+      <div class="brand-name">bat — cat with wings</div>
+      
+      <button id="navToggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sideNav" aria-label="Toggle navigation">
+        <span class="nav-toggle-icon" aria-hidden="true">☰</span>
+        <span class="nav-toggle-label">menu</span>
+      </button>
+    </div>
+
+    <div class="sidebar-meta">14 screens · 2026-05-01 18:46</div>
+
+    <div class="search">
+      <input id="q" type="text" placeholder="filter commands…" autocomplete="off" />
+      <span class="clear-k">/</span>
+    </div>
+
+    <ul class="side-nav" id="sideNav">
+      <li class="grp" data-grp="languages">
+        <div class="grp-title"><span>Languages</span><span class="count">5</span></div>
+        <a href="#go-file" data-cmd="go-file" data-search="go-file go source  bat --paging=never --color=always corpus/termbook.go | head -50">
+          <span class="dot">·</span><span>Go source</span>
+        </a>
+        <a href="#markdown" data-cmd="markdown" data-search="markdown markdown  bat --paging=never --color=always corpus/readme.md">
+          <span class="dot">·</span><span>Markdown</span>
+        </a>
+        <a href="#yaml" data-cmd="yaml" data-search="yaml yaml  bat --paging=never --color=always corpus/action.yml">
+          <span class="dot">·</span><span>YAML</span>
+        </a>
+        <a href="#html" data-cmd="html" data-search="html html / css / js  bat --paging=never --color=always corpus/gallery.html | head -60">
+          <span class="dot">·</span><span>HTML / CSS / JS</span>
+        </a>
+        <a href="#multi" data-cmd="multi" data-search="multi two files  bat --paging=never --color=always corpus/go.mod corpus/go.sum">
+          <span class="dot">·</span><span>two files</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="style">
+        <div class="grp-title"><span>Style</span><span class="count">4</span></div>
+        <a href="#plain" data-cmd="plain" data-search="plain plain (no decorations)  bat --paging=never --color=always --plain corpus/cmd/termbook/main.go">
+          <span class="dot">·</span><span>plain (no decorations)</span>
+        </a>
+        <a href="#numbers" data-cmd="numbers" data-search="numbers numbers only  bat --paging=never --color=always --style=numbers corpus/cmd/termbook/main.go">
+          <span class="dot">·</span><span>numbers only</span>
+        </a>
+        <a href="#full" data-cmd="full" data-search="full full decorations  bat --paging=never --color=always --style=full corpus/cmd/termbook/build.go | head -50">
+          <span class="dot">·</span><span>full decorations</span>
+        </a>
+        <a href="#grid" data-cmd="grid" data-search="grid grid &#43; header  bat --paging=never --color=always --style=grid,numbers,header corpus/cmd/termbook/record.go | head -40">
+          <span class="dot">·</span><span>grid &#43; header</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="slice">
+        <div class="grp-title"><span>Slice</span><span class="count">2</span></div>
+        <a href="#line-range" data-cmd="line-range" data-search="line-range line range 1:30  bat --paging=never --color=always --line-range=1:30 corpus/termbook.go">
+          <span class="dot">·</span><span>line range 1:30</span>
+        </a>
+        <a href="#highlight" data-cmd="highlight" data-search="highlight highlight lines  bat --paging=never --color=always --highlight-line=10:20 corpus/cmd/termbook/main.go">
+          <span class="dot">·</span><span>highlight lines</span>
+        </a>
+        
+      </li>
+      <li class="grp" data-grp="themes">
+        <div class="grp-title"><span>Themes</span><span class="count">3</span></div>
+        <a href="#theme-dracula" data-cmd="theme-dracula" data-search="theme-dracula dracula  bat --paging=never --color=always --theme=dracula corpus/cmd/termbook/main.go | head -30">
+          <span class="dot">·</span><span>Dracula</span>
+        </a>
+        <a href="#theme-nord" data-cmd="theme-nord" data-search="theme-nord nord  bat --paging=never --color=always --theme=nord corpus/cmd/termbook/main.go | head -30">
+          <span class="dot">·</span><span>Nord</span>
+        </a>
+        <a href="#theme-solarized" data-cmd="theme-solarized" data-search="theme-solarized solarized dark  bat --paging=never --color=always --theme=&#39;solarized (dark)&#39; corpus/cmd/termbook/main.go | head -30">
+          <span class="dot">·</span><span>Solarized dark</span>
+        </a>
+        
+      </li>
+      
+    </ul>
+
+    <div class="side-foot">
+      <a href="https://github.com/sharkdp/bat" target="_blank" rel="noopener">↗ github</a><br>
+      14 screens · 4 groups<br>
+      generated 2026-05-01 18:46
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        <span>bat — cat with wings</span><span class="sep">/</span><span class="here">gallery</span>
+      </div>
+      <div class="theme-toggle" role="tablist" aria-label="Theme">
+        <button id="tDark" class="active" aria-pressed="true">dark</button>
+        <button id="tLight" aria-pressed="false">light</button>
+      </div>
+    </header>
+
+    <section class="mast">
+      <div>
+        
+        <h1><span class="slash">/</span> bat — cat with wings</h1>
+        
+      </div>
+      
+    </section>
+
+    
+
+    <div>
+      <section class="section" id="section-languages" data-grp="languages">
+        <div class="section-head">
+          <div class="section-num">§ 01</div>
+          <div class="section-name">Languages</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="go-file" data-cmd="go-file" data-search="go-file go source  bat --paging=never --color=always corpus/termbook.go | head -50">
+            <div class="entry-meta">
+              <div class="id">go-file</div>
+              <h4>Go source</h4>
+              
+              <div class="tags"><span>languages</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always corpus/termbook.go | head -50</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always corpus/termbook.go | head -50</span></div>
+                <pre class="term-body">─────┬──────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;termbook.go</span>
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ <span class="term-fgi94">&#47;&#47; Package termbook generates browsable HTML galleries of CLI terminal output.</span>
+   2 │ <span class="term-fgi94">&#47;&#47;</span>
+   3 │ <span class="term-fgi94">&#47;&#47; It captures ANSI-colored command output and renders it as a static HTML page</span>
+   4 │ <span class="term-fgi94">&#47;&#47; with a sidebar-driven reading layout, dark&#47;light themes, a fuzzy filter,</span>
+   5 │ <span class="term-fgi94">&#47;&#47; and responsive breakpoints down to phone — like Storybook, but for CLI</span>
+   6 │ <span class="term-fgi94">&#47;&#47; tools.</span>
+   7 │ <span class="term-fgi94">&#47;&#47;</span>
+   8 │ <span class="term-fgi94">&#47;&#47; Zero-config produces a polished gallery. A handful of options set colors,</span>
+   9 │ <span class="term-fgi94">&#47;&#47; fonts, and the GitHub link. Everything else — brand mark, crumbs, kicker,</span>
+  10 │ <span class="term-fgi94">&#47;&#47; facts, notes callout, footer, attribution, bloom — lives on one [Decor]</span>
+  11 │ <span class="term-fgi94">&#47;&#47; struct so the option surface stays small:</span>
+  12 │ <span class="term-fgi94">&#47;&#47;</span>
+  13 │ <span class="term-fgi94">&#47;&#47;  book := termbook.New(&quot;My CLI&quot;,</span>
+  14 │ <span class="term-fgi94">&#47;&#47;      termbook.WithAccent(&quot;#FF6B6B&quot;),</span>
+  15 │ <span class="term-fgi94">&#47;&#47;      termbook.WithGitHub(&quot;https:&#47;&#47;github.com&#47;you&#47;mycli&quot;),</span>
+  16 │ <span class="term-fgi94">&#47;&#47;      termbook.WithDecor(termbook.Decor{</span>
+  17 │ <span class="term-fgi94">&#47;&#47;          BrandName:    &quot;my cli&quot;,</span>
+  18 │ <span class="term-fgi94">&#47;&#47;          BrandVersion: &quot;v1.0.0&quot;,</span>
+  19 │ <span class="term-fgi94">&#47;&#47;          Kicker:       &quot;Internal · Screen reference&quot;,</span>
+  20 │ <span class="term-fgi94">&#47;&#47;          Lede:         &quot;Generated from real output.&quot;,</span>
+  21 │ <span class="term-fgi94">&#47;&#47;          Facts:        []termbook.Fact{{&quot;120&quot;, &quot;screens&quot;}, {&quot;12&quot;, &quot;groups&quot;}},</span>
+  22 │ <span class="term-fgi94">&#47;&#47;      }),</span>
+  23 │ <span class="term-fgi94">&#47;&#47;  )</span>
+  24 │ <span class="term-fgi94">&#47;&#47;  book.Category(&quot;Commands&quot;, &quot;commands&quot;,</span>
+  25 │ <span class="term-fgi94">&#47;&#47;      termbook.Scr(&quot;list&quot;, &quot;list users&quot;, &quot;List all users&quot;, &quot;mycli list&quot;, capturedANSI),</span>
+  26 │ <span class="term-fgi94">&#47;&#47;  )</span>
+  27 │ <span class="term-fgi94">&#47;&#47;  book.Generate(&quot;docs&#47;gallery&#47;index.html&quot;)</span>
+  28 │ package termbook
+  29 │
+  30 │ import (
+  31 │     &quot;bytes&quot;
+  32 │     &quot;cmp&quot;
+  33 │     _ &quot;embed&quot;
+  34 │     &quot;fmt&quot;
+  35 │     &quot;html&#47;template&quot;
+  36 │     &quot;io&quot;
+  37 │     &quot;os&quot;
+  38 │     &quot;path&#47;filepath&quot;
+  39 │     &quot;strings&quot;
+  40 │     &quot;time&quot;
+  41 │
+  42 │     terminal &quot;github.com&#47;buildkite&#47;terminal-to-html&#47;v3&quot;
+  43 │ )
+  44 │
+  45 │ <span class="term-fgi94">&#47;&#47;go:embed gallery.html</span>
+  46 │ <span class="term-bgi102">var</span> defaultTemplate <span class="term-bg46">string</span>
+  47 │</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="markdown" data-cmd="markdown" data-search="markdown markdown  bat --paging=never --color=always corpus/readme.md">
+            <div class="entry-meta">
+              <div class="id">markdown</div>
+              <h4>Markdown</h4>
+              
+              <div class="tags"><span>languages</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always corpus/README.md</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always corpus/README.md</span></div>
+                <pre class="term-body"> ─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;README.md</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ <span class="term-fg31"># termbook</span>
+   2 │
+   3 │ Generate browsable HTML galleries from CLI terminal output. Like Storybook, but for command-line tools.
+   4 │
+   5 │ Captures ANSI-colored output and renders it as a static page with a grid layout, dark&#47;light themes, click-to-expa
+     │ nd terminals, and sidebar navigation.
+   6 │
+   7 │ &lt;img <span class="term-bg46">width=</span>&quot;3892&quot; <span class="term-bg46">height=</span>&quot;2196&quot; <span class="term-bg46">alt=</span>&quot;cli&quot; <span class="term-bg46">src=</span>&quot;https:&#47;&#47;github.com&#47;user-attachments&#47;assets&#47;da17c2db-f739-400e-9dd3
+     │ -d597020f00eb&quot; &#47;&gt;
+   8 │
+   9 │
+  10 │ <span class="term-fg31">## Examples</span>
+  11 │
+  12 │ - [eza — modern ls](<span class="term-bg46 term-fg4">https:&#47;&#47;htmlpreview.github.io&#47;?https:&#47;&#47;raw.githubusercontent.com&#47;tiulpin&#47;termbook&#47;main&#47;exampl</span>
+     │ <span class="term-bg46 term-fg4">es&#47;eza&#47;gallery.html</span>)
+  13 │ - [ripgrep — fast recursive search](<span class="term-bg46 term-fg4">https:&#47;&#47;htmlpreview.github.io&#47;?https:&#47;&#47;raw.githubusercontent.com&#47;tiulpin&#47;term</span>
+     │ <span class="term-bg46 term-fg4">book&#47;main&#47;examples&#47;ripgrep&#47;gallery.html</span>)
+  14 │
+  15 │ Manifests live under [`examples&#47;`](<span class="term-bg46 term-fg4">examples&#47;</span>); each one is a `.termbook&#47;termbook.yml` plus committed `*.ansi` cap
+     │ tures.
+  16 │
+  17 │ <span class="term-fg31">## Usage</span>
+  18 │
+  19 │ ```go
+  20 │ book := termbook.New(&quot;mycli — screen gallery&quot;,
+  21 │     termbook.WithGitHub(&quot;https:&#47;&#47;github.com&#47;you&#47;mycli&quot;),
+  22 │ )
+  23 │
+  24 │ book.Category(&quot;Users&quot;, &quot;users&quot;,
+  25 │     termbook.Scr(&quot;user-list&quot;, &quot;user list&quot;, &quot;List all users&quot;,
+  26 │         &quot;mycli user list&quot;, capturedANSIOutput),
+  27 │ )
+  28 │
+  29 │ book.Generate(&quot;docs&#47;gallery&#47;index.html&quot;)
+  30 │ ```
+  31 │
+  32 │ `Scr` takes an ANSI string — capture it however you want. There&#39;s also `Manual` for building output with a writer
+     │ :
+  33 │
+  34 │ ```go
+  35 │ termbook.Manual(&quot;login&quot;, &quot;login&quot;, &quot;Auth flow&quot;, &quot;mycli login&quot;, func(w io.Writer) {
+  36 │     fmt.Fprintf(w, &quot;✓ Logged in as admin\n&quot;)
+  37 │ })
+  38 │ ```
+  39 │
+  40 │ <span class="term-fg31">## Capture helper for Cobra</span>
+  41 │
+  42 │ ```go
+  43 │ func capture(rootCmd *cobra.Command, args ...string) string {
+  44 │     var buf bytes.Buffer
+  45 │     rootCmd.SetArgs(args)
+  46 │     rootCmd.SetOut(&amp;buf)
+  47 │     rootCmd.SetErr(&amp;buf)
+  48 │     rootCmd.Execute()
+  49 │     return buf.String()
+  50 │ }
+  51 │ ```
+  52 │
+  53 │ <span class="term-fg31">## Options</span>
+  54 │
+  55 │ ```go
+  56 │ &#47;&#47; Branding
+  57 │ termbook.WithGitHub(&quot;https:&#47;&#47;github.com&#47;...&quot;)          &#47;&#47; star link in header
+  58 │ termbook.WithIntro(&quot;Generated from real output&quot;)       &#47;&#47; intro text below header
+  59 │
+  60 │ &#47;&#47; Appearance
+  61 │ termbook.WithAccent(&quot;#FF6B6B&quot;)                         &#47;&#47; accent color (both themes)
+  62 │ termbook.WithDefaultTheme(&quot;light&quot;)                     &#47;&#47; &quot;dark&quot; (default) or &quot;light&quot;
+  63 │ termbook.WithFont(&quot;Fira Code&quot;,                         &#47;&#47; custom monospace font
+  64 │     &quot;https:&#47;&#47;fonts.googleapis.com&#47;css2?family=Fira+Code:wght@400;500;700&amp;display=swap&quot;)
+  65 │ termbook.WithColumns(2)                                &#47;&#47; grid columns (default 3)
+  66 │
+  67 │ &#47;&#47; Advanced
+  68 │ termbook.WithCSS(&quot;.terminal pre { font-size: 14px }&quot;)  &#47;&#47; inject extra CSS
+  69 │ termbook.WithTemplate(myHTML)                          &#47;&#47; replace entire template
+  70 │ ```
+  71 │
+  72 │ Zero config works out of the box. Each option layers on independently.
+  73 │
+  74 │ <span class="term-fg31">## Install</span>
+  75 │
+  76 │ ```
+  77 │ go get github.com&#47;tiulpin&#47;termbook
+  78 │ ```
+  79 │
+  80 │ <span class="term-fg31">## See also</span>
+  81 │
+  82 │ - [terminal-to-html](<span class="term-bg46 term-fg4">https:&#47;&#47;github.com&#47;buildkite&#47;terminal-to-html</span>) by Buildkite — standalone CLI to convert ANSI
+     │  terminal output to HTML
+  83 │ - [VHS](<span class="term-bg46 term-fg4">https:&#47;&#47;github.com&#47;charmbracelet&#47;vhs</span>) by Charm — record terminal sessions as GIFs&#47;MP4s from tape files
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="yaml" data-cmd="yaml" data-search="yaml yaml  bat --paging=never --color=always corpus/action.yml">
+            <div class="entry-meta">
+              <div class="id">yaml</div>
+              <h4>YAML</h4>
+              
+              <div class="tags"><span>languages</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always corpus/action.yml</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always corpus/action.yml</span></div>
+                <pre class="term-body"> ─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;action.yml</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ name: termbook
+   2 │ description: Build a termbook gallery from a committed manifest and captures.
+   3 │ branding:
+   4 │   icon: terminal
+   5 │   color: gray-dark
+   6 │
+   7 │ inputs:
+   8 │   version:
+   9 │     description: termbook version to install (e.g. v0.2.0). &quot;latest&quot; picks the most recent release.
+  10 │     default: latest
+  11 │     required: false
+  12 │   output:
+  13 │     description: Path to write the generated gallery HTML to.
+  14 │     default: gallery.html
+  15 │     required: false
+  16 │   only:
+  17 │     description: Render only the screen with this id.
+  18 │     required: false
+  19 │   working-directory:
+  20 │     description: Directory containing .termbook&#47;termbook.yml.
+  21 │     default: .
+  22 │     required: false
+  23 │
+  24 │ outputs:
+  25 │   output:
+  26 │     description: Path of the generated gallery HTML file.
+  27 │     value: ${{ steps.build.outputs.path }}
+  28 │
+  29 │ runs:
+  30 │   using: composite
+  31 │   steps:
+  32 │     - name: Install termbook
+  33 │       shell: bash
+  34 │       env:
+  35 │         TERMBOOK_VERSION: ${{ inputs.version }}
+  36 │       run: |
+  37 │         set -euo pipefail
+  38 │
+  39 │         os=&quot;&quot;
+  40 │         case &quot;$(uname -s)&quot; in
+  41 │           Darwin) os=macos ;;
+  42 │           Linux)  os=linux ;;
+  43 │           *) echo &quot;termbook action: unsupported OS $(uname -s)&quot; &gt;&amp;2; exit 1 ;;
+  44 │         esac
+  45 │
+  46 │         arch=&quot;&quot;
+  47 │         case &quot;$(uname -m)&quot; in
+  48 │           x86_64|amd64) arch=x86_64 ;;
+  49 │           arm64|aarch64) arch=arm64 ;;
+  50 │           *) echo &quot;termbook action: unsupported arch $(uname -m)&quot; &gt;&amp;2; exit 1 ;;
+  51 │         esac
+  52 │
+  53 │         version=&quot;$TERMBOOK_VERSION&quot;
+  54 │         if [ &quot;$version&quot; = &quot;latest&quot; ]; then
+  55 │           version=&quot;$(curl -fsSL https:&#47;&#47;api.github.com&#47;repos&#47;tiulpin&#47;termbook&#47;releases&#47;latest | sed -n &#39;s&#47;.*&quot;tag_
+     │ name&quot;:[[:space:]]*&quot;\([^&quot;]*\)&quot;.*&#47;\1&#47;p&#39; | head -n1)&quot;
+  56 │           [ -n &quot;$version&quot; ] || { echo &quot;termbook action: could not resolve latest version&quot; &gt;&amp;2; exit 1; }
+  57 │         fi
+  58 │         version_no_v=&quot;${version#v}&quot;
+  59 │
+  60 │         url=&quot;https:&#47;&#47;github.com&#47;tiulpin&#47;termbook&#47;releases&#47;download&#47;${version}&#47;termbook_${version_no_v}_${os}_${ar
+     │ ch}.tar.gz&quot;
+  61 │         echo &quot;termbook action: downloading $url&quot;
+  62 │
+  63 │         tmp=&quot;$(mktemp -d)&quot;
+  64 │         curl -fsSL &quot;$url&quot; -o &quot;$tmp&#47;termbook.tar.gz&quot;
+  65 │         tar -xzf &quot;$tmp&#47;termbook.tar.gz&quot; -C &quot;$tmp&quot;
+  66 │         install -m 0755 &quot;$tmp&#47;termbook&quot; &quot;${RUNNER_TOOL_CACHE:-&#47;usr&#47;local&#47;bin}&#47;termbook&quot;
+  67 │         echo &quot;${RUNNER_TOOL_CACHE:-&#47;usr&#47;local&#47;bin}&quot; &gt;&gt; &quot;$GITHUB_PATH&quot;
+  68 │
+  69 │     - name: Build gallery
+  70 │       id: build
+  71 │       shell: bash
+  72 │       working-directory: ${{ inputs.working-directory }}
+  73 │       env:
+  74 │         TERMBOOK_OUTPUT: ${{ inputs.output }}
+  75 │         TERMBOOK_ONLY: ${{ inputs.only }}
+  76 │       run: |
+  77 │         set -euo pipefail
+  78 │         args=(build -o &quot;$TERMBOOK_OUTPUT&quot;)
+  79 │         if [ -n &quot;$TERMBOOK_ONLY&quot; ]; then
+  80 │           args+=(--only &quot;$TERMBOOK_ONLY&quot;)
+  81 │         fi
+  82 │         termbook &quot;${args[@]}&quot;
+  83 │         echo &quot;path=$TERMBOOK_OUTPUT&quot; &gt;&gt; &quot;$GITHUB_OUTPUT&quot;
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="html" data-cmd="html" data-search="html html / css / js  bat --paging=never --color=always corpus/gallery.html | head -60">
+            <div class="entry-meta">
+              <div class="id">html</div>
+              <h4>HTML / CSS / JS</h4>
+              
+              <div class="tags"><span>languages</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always corpus/gallery.html | head -60</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always corpus/gallery.html | head -60</span></div>
+                <pre class="term-body">─────┬──────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;gallery.html</span>
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ &lt;!DOCTYPE html&gt;
+   2 │ &lt;html<span class="term-bg46"> lang=</span>&quot;en&quot;<span class="term-bg46"> data-theme=</span>&quot;{{.DefaultTheme}}&quot;&gt;
+   3 │ &lt;head&gt;
+   4 │ &lt;meta<span class="term-bg46"> charset=</span>&quot;UTF-8&quot;&gt;
+   5 │ &lt;meta<span class="term-bg46"> name=</span>&quot;viewport&quot;<span class="term-bg46"> content=</span>&quot;width=device-width, initial-scale=1.0&quot;&gt;
+   6 │ &lt;title&gt;{{.Title}}&lt;&#47;title&gt;
+   7 │ &lt;link<span class="term-bg46"> rel=</span>&quot;preconnect&quot;<span class="term-bg46"> href=</span>&quot;https:&#47;&#47;fonts.googleapis.com&quot;&gt;
+   8 │ &lt;link<span class="term-bg46"> rel=</span>&quot;preconnect&quot;<span class="term-bg46"> href=</span>&quot;https:&#47;&#47;fonts.gstatic.com&quot;<span class="term-bg46"> crossorigin</span>&gt;
+   9 │ &lt;link<span class="term-bg46"> href=</span>&quot;{{.FontURL}}&quot;<span class="term-bg46"> rel=</span>&quot;stylesheet&quot;&gt;
+  10 │ {{if .SansFontURL}}&lt;link<span class="term-bg46"> href=</span>&quot;{{.SansFontURL}}&quot;<span class="term-bg46"> rel=</span>&quot;stylesheet&quot;&gt;{{end}}
+  11 │ &lt;style&gt;
+  12 │ <span class="term-bg46">:root</span> {
+  13 │   <span class="term-bg46">--mono</span>: &quot;{{.FontName}}&quot;, ui-<span class="term-bgi102">monospace</span>, &quot;SF Mono&quot;, Menlo, Consolas, <span class="term-bgi102">monospace</span>;
+  14 │   <span class="term-bg46">--sans</span>: &quot;{{.SansFontName}}&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, <span class="term-bgi102">sans-serif</span>;
+  15 │ }
+  16 │ <span class="term-bg46">:root</span>, [<span class="term-bg46">data-theme</span>=&quot;dark&quot;] {
+  17 │   <span class="term-bg46">--bg</span>: #0b0d10; <span class="term-bg46">--bg-1</span>: #111419; <span class="term-bg46">--bg-2</span>: #161a20; <span class="term-bg46">--bg-3</span>: #1c2128;
+  18 │   <span class="term-bg46">--line</span>: #242a33; <span class="term-bg46">--line-2</span>: #2f3742;
+  19 │   <span class="term-bg46">--fg</span>: #e6e8eb; <span class="term-bg46">--fg-2</span>: #b6bcc5; <span class="term-bg46">--fg-3</span>: #7d8693; <span class="term-bg46">--fg-4</span>: #4a525d;
+  20 │   <span class="term-bg46">--green</span>:  oklch(0.78 0.14 150);
+  21 │   <span class="term-bg46">--red</span>:    oklch(0.72 0.17 25);
+  22 │   <span class="term-bg46">--yellow</span>: oklch(0.82 0.15 85);
+  23 │   <span class="term-bg46">--cyan</span>:   oklch(0.80 0.12 210);
+  24 │   <span class="term-bg46">--blue</span>:   oklch(0.74 0.14 240);
+  25 │   <span class="term-bg46">--magenta</span>:oklch(0.74 0.15 330);
+  26 │   <span class="term-bg46">--accent</span>: oklch(0.82 0.15 85);
+  27 │ }
+  28 │ [<span class="term-bg46">data-theme</span>=&quot;light&quot;] {
+  29 │   <span class="term-bg46">--bg</span>: #f6f5f1; <span class="term-bg46">--bg-1</span>: #ffffff; <span class="term-bg46">--bg-2</span>: #ecebe6; <span class="term-bg46">--bg-3</span>: #e1dfd8;
+  30 │   <span class="term-bg46">--line</span>: #d6d4cc; <span class="term-bg46">--line-2</span>: #bcb9ae;
+  31 │   <span class="term-bg46">--fg</span>: #17191c; <span class="term-bg46">--fg-2</span>: #2e3238; <span class="term-bg46">--fg-3</span>: #5a6069; <span class="term-bg46">--fg-4</span>: #8e949d;
+  32 │   <span class="term-bg46">--green</span>:  oklch(0.55 0.16 145);
+  33 │   <span class="term-bg46">--red</span>:    oklch(0.55 0.20 25);
+  34 │   <span class="term-bg46">--yellow</span>: oklch(0.58 0.16 75);
+  35 │   <span class="term-bg46">--cyan</span>:   oklch(0.52 0.13 220);
+  36 │   <span class="term-bg46">--blue</span>:   oklch(0.48 0.17 250);
+  37 │   <span class="term-bg46">--magenta</span>:oklch(0.50 0.18 330);
+  38 │   <span class="term-bg46">--accent</span>: oklch(0.55 0.16 75);
+  39 │ }
+  40 │
+  41 │ * { <span class="term-bgi102">box-sizing</span>: <span class="term-bgi102">border-box</span>; }
+  42 │ html, body { <span class="term-bgi102">margin</span>: 0; <span class="term-bgi102">padding</span>: 0; }
+  43 │ html { <span class="term-bgi102">scroll-behavior</span>: <span class="term-bgi102">smooth</span>; }
+  44 │ body {
+  45 │   <span class="term-bgi102">background</span>: <span class="term-bgi102">var</span>(<span class="term-bg46">--bg</span>); <span class="term-bgi102">color</span>: <span class="term-bgi102">var</span>(<span class="term-bg46">--fg</span>);
+  46 │   <span class="term-bgi102">font-family</span>: <span class="term-bgi102">var</span>(<span class="term-bg46">--sans</span>);
+  47 │   <span class="term-bgi102">font-feature-settings</span>: &quot;ss01&quot;, &quot;cv11&quot;;
+  48 │   <span class="term-bg46">-webkit-</span><span class="term-bgi102">font-smoothing</span>: <span class="term-bgi102">antialiased</span>;
+  49 │   <span class="term-bgi102">text-rendering</span>: <span class="term-bgi102">optimizeLegibility</span>;
+  50 │   <span class="term-bgi102">min-height</span>: 100vh;
+  51 │ }
+  52 │
+  53 │ <span class="term-fgi94">&#47;* ---- Layout ---- *&#47;</span>
+  54 │ <span class="term-bg46">.page</span> {
+  55 │   <span class="term-bgi102">display</span>: <span class="term-bgi102">grid</span>;
+  56 │   <span class="term-bgi102">grid-template-columns</span>: 300px 1fr;
+  57 │   <span class="term-bgi102">max-width</span>: 1440px;</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="multi" data-cmd="multi" data-search="multi two files  bat --paging=never --color=always corpus/go.mod corpus/go.sum">
+            <div class="entry-meta">
+              <div class="id">multi</div>
+              <h4>two files</h4>
+              
+              <div class="tags"><span>languages</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always corpus/go.mod corpus/go.sum</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always corpus/go.mod corpus/go.sum</span></div>
+                <pre class="term-body"> ─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;go.mod</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ module github.com&#47;tiulpin&#47;termbook
+   2 │
+   3 │ go 1.26
+   4 │
+   5 │ require github.com&#47;buildkite&#47;terminal-to-html&#47;v3 v3.16.8
+   6 │
+   7 │ require (
+   8 │     github.com&#47;creack&#47;pty v1.1.24 <span class="term-fgi94">&#47;&#47; indirect</span>
+   9 │     github.com&#47;inconshreveable&#47;mousetrap v1.1.0 <span class="term-fgi94">&#47;&#47; indirect</span>
+  10 │     github.com&#47;spf13&#47;cobra v1.10.2 <span class="term-fgi94">&#47;&#47; indirect</span>
+  11 │     github.com&#47;spf13&#47;pflag v1.0.9 <span class="term-fgi94">&#47;&#47; indirect</span>
+  12 │     gopkg.in&#47;yaml.v3 v3.0.1 <span class="term-fgi94">&#47;&#47; indirect</span>
+  13 │ )
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;go.sum</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ github.com&#47;buildkite&#47;terminal-to-html&#47;v3 v3.16.8 <span class="term-bg46">h1</span>:QN&#47;daUob6cmK8GcdKnwn9+YTlPr1vNj+oeAIiJK6fPc=
+   2 │ github.com&#47;buildkite&#47;terminal-to-html&#47;v3 v3.16.8&#47;go.mod <span class="term-bg46">h1</span>:+k1KVKROZocrTLsEQ9PEf9A+8+X8uaVV5iO1ZIOwKYM=
+   3 │ github.com&#47;cpuguy83&#47;go-md2man&#47;v2 v2.0.6&#47;go.mod <span class="term-bg46">h1</span>:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
+   4 │ github.com&#47;creack&#47;pty v1.1.24 <span class="term-bg46">h1</span>:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
+   5 │ github.com&#47;creack&#47;pty v1.1.24&#47;go.mod <span class="term-bg46">h1</span>:08sCNb52WyoAwi2QDyzUCTgcvVFhUzewun7wtTfvcwE=
+   6 │ github.com&#47;inconshreveable&#47;mousetrap v1.1.0 <span class="term-bg46">h1</span>:wN+x4NVGpMsO7ErUn&#47;mUI3vEoE6Jt13X2s0bqwp9tc8=
+   7 │ github.com&#47;inconshreveable&#47;mousetrap v1.1.0&#47;go.mod <span class="term-bg46">h1</span>:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
+   8 │ github.com&#47;russross&#47;blackfriday&#47;v2 v2.1.0&#47;go.mod <span class="term-bg46">h1</span>:+Rmxgy9KzJVeS9&#47;2gXHxylqXiyQDYRxCVz55jmeOWTM=
+   9 │ github.com&#47;spf13&#47;cobra v1.10.2 <span class="term-bg46">h1</span>:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=
+  10 │ github.com&#47;spf13&#47;cobra v1.10.2&#47;go.mod <span class="term-bg46">h1</span>:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiTUUS4=
+  11 │ github.com&#47;spf13&#47;pflag v1.0.9 <span class="term-bg46">h1</span>:9exaQaMOCwffKiiiYk6&#47;BndUBv+iRViNW+4lEMi0PvY=
+  12 │ github.com&#47;spf13&#47;pflag v1.0.9&#47;go.mod <span class="term-bg46">h1</span>:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+  13 │ go.yaml.in&#47;yaml&#47;v3 v3.0.4&#47;go.mod <span class="term-bg46">h1</span>:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
+  14 │ gopkg.in&#47;check.v1 v0.0.0-20161208181325-20d25e280405&#47;go.mod <span class="term-bg46">h1</span>:Co6ibVJAznAaIkqp8huTwlJQCZ016jof&#47;cbN4VW5Yz0=
+  15 │ gopkg.in&#47;yaml.v3 v3.0.1 <span class="term-bg46">h1</span>:fxVm&#47;GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+  16 │ gopkg.in&#47;yaml.v3 v3.0.1&#47;go.mod <span class="term-bg46">h1</span>:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-style" data-grp="style">
+        <div class="section-head">
+          <div class="section-num">§ 02</div>
+          <div class="section-name">Style</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="plain" data-cmd="plain" data-search="plain plain (no decorations)  bat --paging=never --color=always --plain corpus/cmd/termbook/main.go">
+            <div class="entry-meta">
+              <div class="id">plain</div>
+              <h4>plain (no decorations)</h4>
+              
+              <div class="tags"><span>style</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --plain corpus/cmd/termbook/main.go</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --plain corpus/cmd/termbook/main.go</span></div>
+                <pre class="term-body"> package main
+&nbsp;
+import (
+	&quot;fmt&quot;
+	&quot;os&quot;
+&nbsp;
+	&quot;github.com&#47;spf13&#47;cobra&quot;
+)
+&nbsp;
+<span class="term-bgi102">var</span> version = &quot;dev&quot;
+&nbsp;
+<span class="term-bgi102">func</span> <span class="term-bg46">main</span>() {
+	root := &amp;cobra.Command{
+		Use:           &quot;termbook&quot;,
+		Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Version:       version,
+	}
+	root.AddCommand(newRecordCmd(), newBuildCmd())
+&nbsp;
+	if err := root.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, &quot;termbook:&quot;, err)
+		os.Exit(1)
+	}
+}</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="numbers" data-cmd="numbers" data-search="numbers numbers only  bat --paging=never --color=always --style=numbers corpus/cmd/termbook/main.go">
+            <div class="entry-meta">
+              <div class="id">numbers</div>
+              <h4>numbers only</h4>
+              
+              <div class="tags"><span>style</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --style=numbers corpus/cmd/termbook/main.go</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --style=numbers corpus/cmd/termbook/main.go</span></div>
+                <pre class="term-body">    1 package main
+   2
+   3 import (
+   4     &quot;fmt&quot;
+   5     &quot;os&quot;
+   6
+   7     &quot;github.com&#47;spf13&#47;cobra&quot;
+   8 )
+   9
+  10 <span class="term-bgi102">var</span> version = &quot;dev&quot;
+  11
+  12 <span class="term-bgi102">func</span> <span class="term-bg46">main</span>() {
+  13     root := &amp;cobra.Command{
+  14         Use:           &quot;termbook&quot;,
+  15         Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+  16         SilenceUsage:  true,
+  17         SilenceErrors: true,
+  18         Version:       version,
+  19     }
+  20     root.AddCommand(newRecordCmd(), newBuildCmd())
+  21
+  22     if err := root.Execute(); err != nil {
+  23         fmt.Fprintln(os.Stderr, &quot;termbook:&quot;, err)
+  24         os.Exit(1)
+  25     }
+  26 }</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="full" data-cmd="full" data-search="full full decorations  bat --paging=never --color=always --style=full corpus/cmd/termbook/build.go | head -50">
+            <div class="entry-meta">
+              <div class="id">full</div>
+              <h4>full decorations</h4>
+              
+              <div class="tags"><span>style</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --style=full corpus/cmd/termbook/build.go | head -50</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --style=full corpus/cmd/termbook/build.go | head -50</span></div>
+                <pre class="term-body">─────┬──────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;build.go</span>
+     │ Size: <span class="term-fg1">2.5 KB</span>
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ package main
+   2 │
+   3 │ import (
+   4 │     &quot;errors&quot;
+   5 │     &quot;fmt&quot;
+   6 │     &quot;os&quot;
+   7 │
+   8 │     &quot;github.com&#47;spf13&#47;cobra&quot;
+   9 │
+  10 │     &quot;github.com&#47;tiulpin&#47;termbook&quot;
+  11 │     &quot;github.com&#47;tiulpin&#47;termbook&#47;internal&#47;config&quot;
+  12 │ )
+  13 │
+  14 │ <span class="term-bgi102">func</span> <span class="term-bg46">newBuildCmd</span>() *cobra.<span class="term-bgi102">Command</span> {
+  15 │     <span class="term-bgi102">var</span> (
+  16 │         output <span class="term-bg46">string</span>
+  17 │         only   <span class="term-bg46">string</span>
+  18 │     )
+  19 │     cmd := &amp;cobra.Command{
+  20 │         Use:   &quot;build&quot;,
+  21 │         Short: &quot;Render gallery.html from the manifest and captures&quot;,
+  22 │         Args:  cobra.NoArgs,
+  23 │         RunE: <span class="term-bgi102">func</span>(<span class="term-fg31">cc</span> *cobra.<span class="term-bgi102">Command</span>, _ []<span class="term-bg46">string</span>) <span class="term-bg46">error</span> {
+  24 │             workdir, err := os.Getwd()
+  25 │             if err != nil {
+  26 │                 return err
+  27 │             }
+  28 │             manifestPath := config.ManifestPath(workdir)
+  29 │             m, err := config.Load(manifestPath)
+  30 │             if err != nil {
+  31 │                 if errors.Is(err, os.ErrNotExist) {
+  32 │                     return fmt.Errorf(&quot;no manifest at %s — run `termbook record` first&quot;, manifestPath)
+  33 │                 }
+  34 │                 return err
+  35 │             }
+  36 │
+  37 │             <span class="term-bgi102">var</span> opts []termbook.<span class="term-bgi102">Option</span>
+  38 │             if m.Accent != &quot;&quot; {
+  39 │                 opts = <span class="term-bgi102">append</span>(opts, termbook.WithAccent(m.Accent))
+  40 │             }
+  41 │             if m.GitHub != &quot;&quot; {
+  42 │                 opts = <span class="term-bgi102">append</span>(opts, termbook.WithGitHub(m.GitHub))
+  43 │             }
+  44 │             book := termbook.New(m.Title, opts...)
+  45 │
+  46 │             screensEmitted := 0</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="grid" data-cmd="grid" data-search="grid grid &#43; header  bat --paging=never --color=always --style=grid,numbers,header corpus/cmd/termbook/record.go | head -40">
+            <div class="entry-meta">
+              <div class="id">grid</div>
+              <h4>grid &#43; header</h4>
+              
+              <div class="tags"><span>style</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --style=grid,numbers,header corpus/cmd/termbook/record.go | head -40</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --style=grid,numbers,header corpus/cmd/termbook/record.go | head -40</span></div>
+                <pre class="term-body">─────┬──────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;record.go</span>
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ package main
+   2 │
+   3 │ import (
+   4 │     &quot;context&quot;
+   5 │     &quot;errors&quot;
+   6 │     &quot;fmt&quot;
+   7 │     &quot;os&quot;
+   8 │     &quot;path&#47;filepath&quot;
+   9 │     &quot;strings&quot;
+  10 │     &quot;time&quot;
+  11 │
+  12 │     &quot;github.com&#47;spf13&#47;cobra&quot;
+  13 │
+  14 │     &quot;github.com&#47;tiulpin&#47;termbook&#47;internal&#47;capture&quot;
+  15 │     &quot;github.com&#47;tiulpin&#47;termbook&#47;internal&#47;config&quot;
+  16 │ )
+  17 │
+  18 │ <span class="term-bgi102">func</span> <span class="term-bg46">newRecordCmd</span>() *cobra.<span class="term-bgi102">Command</span> {
+  19 │     <span class="term-bgi102">var</span> (
+  20 │         id      <span class="term-bg46">string</span>
+  21 │         cat     <span class="term-bg46">string</span>
+  22 │         title   <span class="term-bg46">string</span>
+  23 │         desc    <span class="term-bg46">string</span>
+  24 │         width   <span class="term-bg46">int</span>
+  25 │         timeout time.<span class="term-bgi102">Duration</span>
+  26 │         only    <span class="term-bg46">string</span>
+  27 │     )
+  28 │     cmd := &amp;cobra.Command{
+  29 │         Use:   &quot;record [command...]&quot;,
+  30 │         Short: &quot;Capture a command&#39;s output and add it to the manifest&quot;,
+  31 │         Long: `Run a command in a PTY, capture its ANSI output, and upsert it into the
+  32 │ manifest. The first invocation scaffolds .termbook&#47;termbook.yml.
+  33 │
+  34 │ With --only &lt;id&gt;, re-captures an existing entry&#39;s command and overwrites
+  35 │ its capture file without changing the manifest.`,
+  36 │         Args: cobra.ArbitraryArgs,
+  37 │         RunE: <span class="term-bgi102">func</span>(<span class="term-fg31">cc</span> *cobra.<span class="term-bgi102">Command</span>, <span class="term-fg31">args</span> []<span class="term-bg46">string</span>) <span class="term-bg46">error</span> {</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-slice" data-grp="slice">
+        <div class="section-head">
+          <div class="section-num">§ 03</div>
+          <div class="section-name">Slice</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="line-range" data-cmd="line-range" data-search="line-range line range 1:30  bat --paging=never --color=always --line-range=1:30 corpus/termbook.go">
+            <div class="entry-meta">
+              <div class="id">line-range</div>
+              <h4>line range 1:30</h4>
+              
+              <div class="tags"><span>slice</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --line-range=1:30 corpus/termbook.go</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --line-range=1:30 corpus/termbook.go</span></div>
+                <pre class="term-body"> ─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;termbook.go</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ <span class="term-fgi94">&#47;&#47; Package termbook generates browsable HTML galleries of CLI terminal output.</span>
+   2 │ <span class="term-fgi94">&#47;&#47;</span>
+   3 │ <span class="term-fgi94">&#47;&#47; It captures ANSI-colored command output and renders it as a static HTML page</span>
+   4 │ <span class="term-fgi94">&#47;&#47; with a sidebar-driven reading layout, dark&#47;light themes, a fuzzy filter,</span>
+   5 │ <span class="term-fgi94">&#47;&#47; and responsive breakpoints down to phone — like Storybook, but for CLI</span>
+   6 │ <span class="term-fgi94">&#47;&#47; tools.</span>
+   7 │ <span class="term-fgi94">&#47;&#47;</span>
+   8 │ <span class="term-fgi94">&#47;&#47; Zero-config produces a polished gallery. A handful of options set colors,</span>
+   9 │ <span class="term-fgi94">&#47;&#47; fonts, and the GitHub link. Everything else — brand mark, crumbs, kicker,</span>
+  10 │ <span class="term-fgi94">&#47;&#47; facts, notes callout, footer, attribution, bloom — lives on one [Decor]</span>
+  11 │ <span class="term-fgi94">&#47;&#47; struct so the option surface stays small:</span>
+  12 │ <span class="term-fgi94">&#47;&#47;</span>
+  13 │ <span class="term-fgi94">&#47;&#47;  book := termbook.New(&quot;My CLI&quot;,</span>
+  14 │ <span class="term-fgi94">&#47;&#47;      termbook.WithAccent(&quot;#FF6B6B&quot;),</span>
+  15 │ <span class="term-fgi94">&#47;&#47;      termbook.WithGitHub(&quot;https:&#47;&#47;github.com&#47;you&#47;mycli&quot;),</span>
+  16 │ <span class="term-fgi94">&#47;&#47;      termbook.WithDecor(termbook.Decor{</span>
+  17 │ <span class="term-fgi94">&#47;&#47;          BrandName:    &quot;my cli&quot;,</span>
+  18 │ <span class="term-fgi94">&#47;&#47;          BrandVersion: &quot;v1.0.0&quot;,</span>
+  19 │ <span class="term-fgi94">&#47;&#47;          Kicker:       &quot;Internal · Screen reference&quot;,</span>
+  20 │ <span class="term-fgi94">&#47;&#47;          Lede:         &quot;Generated from real output.&quot;,</span>
+  21 │ <span class="term-fgi94">&#47;&#47;          Facts:        []termbook.Fact{{&quot;120&quot;, &quot;screens&quot;}, {&quot;12&quot;, &quot;groups&quot;}},</span>
+  22 │ <span class="term-fgi94">&#47;&#47;      }),</span>
+  23 │ <span class="term-fgi94">&#47;&#47;  )</span>
+  24 │ <span class="term-fgi94">&#47;&#47;  book.Category(&quot;Commands&quot;, &quot;commands&quot;,</span>
+  25 │ <span class="term-fgi94">&#47;&#47;      termbook.Scr(&quot;list&quot;, &quot;list users&quot;, &quot;List all users&quot;, &quot;mycli list&quot;, capturedANSI),</span>
+  26 │ <span class="term-fgi94">&#47;&#47;  )</span>
+  27 │ <span class="term-fgi94">&#47;&#47;  book.Generate(&quot;docs&#47;gallery&#47;index.html&quot;)</span>
+  28 │ package termbook
+  29 │
+  30 │ import (
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="highlight" data-cmd="highlight" data-search="highlight highlight lines  bat --paging=never --color=always --highlight-line=10:20 corpus/cmd/termbook/main.go">
+            <div class="entry-meta">
+              <div class="id">highlight</div>
+              <h4>highlight lines</h4>
+              
+              <div class="tags"><span>slice</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --highlight-line=10:20 corpus/cmd/termbook/main.go</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --highlight-line=10:20 corpus/cmd/termbook/main.go</span></div>
+                <pre class="term-body"> ─────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ package main
+   2 │
+   3 │ import (
+   4 │     &quot;fmt&quot;
+   5 │     &quot;os&quot;
+   6 │
+   7 │     &quot;github.com&#47;spf13&#47;cobra&quot;
+   8 │ )
+   9 │
+  10 │ <span class="term-bgi102">var</span> version = &quot;dev&quot;
+  11 │
+  12 │ <span class="term-bgi102">func</span> <span class="term-bg46">main</span>() {
+  13 │     root := &amp;cobra.Command{
+  14 │         Use:           &quot;termbook&quot;,
+  15 │         Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+  16 │         SilenceUsage:  true,
+  17 │         SilenceErrors: true,
+  18 │         Version:       version,
+  19 │     }
+  20 │     root.AddCommand(newRecordCmd(), newBuildCmd())
+  21 │
+  22 │     if err := root.Execute(); err != nil {
+  23 │         fmt.Fprintln(os.Stderr, &quot;termbook:&quot;, err)
+  24 │         os.Exit(1)
+  25 │     }
+  26 │ }
+─────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      <section class="section" id="section-themes" data-grp="themes">
+        <div class="section-head">
+          <div class="section-num">§ 04</div>
+          <div class="section-name">Themes</div>
+          
+        </div>
+        <div class="entries">
+          <article class="entry" id="theme-dracula" data-cmd="theme-dracula" data-search="theme-dracula dracula  bat --paging=never --color=always --theme=dracula corpus/cmd/termbook/main.go | head -30">
+            <div class="entry-meta">
+              <div class="id">theme-dracula</div>
+              <h4>Dracula</h4>
+              
+              <div class="tags"><span>themes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --theme=Dracula corpus/cmd/termbook/main.go | head -30</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --theme=Dracula corpus/cmd/termbook/main.go | head -30</span></div>
+                <pre class="term-body"><span class="term-fgx238">─────┬──────────────────────────────────────────────────────────────────────────</span>
+     <span class="term-fgx238">│ </span>File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fgx238">─────┼──────────────────────────────────────────────────────────────────────────</span>
+<span class="term-fgx238">   1</span> <span class="term-fgx238">│</span> package main
+<span class="term-fgx238">   2</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">   3</span> <span class="term-fgx238">│</span> import (
+<span class="term-fgx238">   4</span> <span class="term-fgx238">│</span>     &quot;fmt&quot;
+<span class="term-fgx238">   5</span> <span class="term-fgx238">│</span>     &quot;os&quot;
+<span class="term-fgx238">   6</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">   7</span> <span class="term-fgx238">│</span>     &quot;github.com&#47;spf13&#47;cobra&quot;
+<span class="term-fgx238">   8</span> <span class="term-fgx238">│</span> )
+<span class="term-fgx238">   9</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  10</span> <span class="term-fgx238">│</span> var version = &quot;dev&quot;
+<span class="term-fgx238">  11</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  12</span> <span class="term-fgx238">│</span> func main() {
+<span class="term-fgx238">  13</span> <span class="term-fgx238">│</span>     root := &amp;cobra.Command{
+<span class="term-fgx238">  14</span> <span class="term-fgx238">│</span>         Use:           &quot;termbook&quot;,
+<span class="term-fgx238">  15</span> <span class="term-fgx238">│</span>         Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+<span class="term-fgx238">  16</span> <span class="term-fgx238">│</span>         SilenceUsage:  true,
+<span class="term-fgx238">  17</span> <span class="term-fgx238">│</span>         SilenceErrors: true,
+<span class="term-fgx238">  18</span> <span class="term-fgx238">│</span>         Version:       version,
+<span class="term-fgx238">  19</span> <span class="term-fgx238">│</span>     }
+<span class="term-fgx238">  20</span> <span class="term-fgx238">│</span>     root.AddCommand(newRecordCmd(), newBuildCmd())
+<span class="term-fgx238">  21</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  22</span> <span class="term-fgx238">│</span>     if err := root.Execute(); err != nil {
+<span class="term-fgx238">  23</span> <span class="term-fgx238">│</span>         fmt.Fprintln(os.Stderr, &quot;termbook:&quot;, err)
+<span class="term-fgx238">  24</span> <span class="term-fgx238">│</span>         os.Exit(1)
+<span class="term-fgx238">  25</span> <span class="term-fgx238">│</span>     }
+<span class="term-fgx238">  26</span> <span class="term-fgx238">│</span> }
+<span class="term-fgx238">─────┴──────────────────────────────────────────────────────────────────────────</span></pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="theme-nord" data-cmd="theme-nord" data-search="theme-nord nord  bat --paging=never --color=always --theme=nord corpus/cmd/termbook/main.go | head -30">
+            <div class="entry-meta">
+              <div class="id">theme-nord</div>
+              <h4>Nord</h4>
+              
+              <div class="tags"><span>themes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --theme=Nord corpus/cmd/termbook/main.go | head -30</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --theme=Nord corpus/cmd/termbook/main.go | head -30</span></div>
+                <pre class="term-body">─────┬──────────────────────────────────────────────────────────────────────────
+     │ File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ package main
+   2 │
+   3 │ import (
+   4 │     &quot;fmt&quot;
+   5 │     &quot;os&quot;
+   6 │
+   7 │     &quot;github.com&#47;spf13&#47;cobra&quot;
+   8 │ )
+   9 │
+  10 │ var version = &quot;dev&quot;
+  11 │
+  12 │ func main() {
+  13 │     root := &amp;cobra.Command{
+  14 │         Use:           &quot;termbook&quot;,
+  15 │         Short:         &quot;Beautiful, browsable reference pages for your CLI&quot;,
+  16 │         SilenceUsage:  true,
+  17 │         SilenceErrors: true,
+  18 │         Version:       version,
+  19 │     }
+  20 │     root.AddCommand(newRecordCmd(), newBuildCmd())
+  21 │
+  22 │     if err := root.Execute(); err != nil {
+  23 │         fmt.Fprintln(os.Stderr, &quot;termbook:&quot;, err)
+  24 │         os.Exit(1)
+  25 │     }
+  26 │ }
+─────┴──────────────────────────────────────────────────────────────────────────</pre>
+              </div>
+            </div>
+          </article>
+          <article class="entry" id="theme-solarized" data-cmd="theme-solarized" data-search="theme-solarized solarized dark  bat --paging=never --color=always --theme=&#39;solarized (dark)&#39; corpus/cmd/termbook/main.go | head -30">
+            <div class="entry-meta">
+              <div class="id">theme-solarized</div>
+              <h4>Solarized dark</h4>
+              
+              <div class="tags"><span>themes</span></div>
+            </div>
+            <div class="entry-term">
+              <div class="term">
+                <div class="term-head">
+                  <div class="term-dots"><i></i><i></i><i></i></div>
+                  <div class="term-title">bat --paging=never --color=always --theme=&#39;Solarized (dark)&#39; corpus/cmd/termbook/main.go | head -30</div>
+                  <div class="term-head-pad"></div>
+                </div>
+                <div class="term-prompt"><span class="p">$</span> <span class="cmd">bat --paging=never --color=always --theme=&#39;Solarized (dark)&#39; corpus/cmd/termbook/main.go | head -30</span></div>
+                <pre class="term-body"><span class="term-fgx238">─────┬──────────────────────────────────────────────────────────────────────────</span>
+     <span class="term-fgx238">│ </span>File: <span class="term-fg1">corpus&#47;cmd&#47;termbook&#47;main.go</span>
+<span class="term-fgx238">─────┼──────────────────────────────────────────────────────────────────────────</span>
+<span class="term-fgx238">   1</span> <span class="term-fgx238">│</span> package main
+<span class="term-fgx238">   2</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">   3</span> <span class="term-fgx238">│</span> import <span class="term-bgi101">(</span>
+<span class="term-fgx238">   4</span> <span class="term-fgx238">│</span>     &quot;<span class="term-bg42">fmt</span>&quot;
+<span class="term-fgx238">   5</span> <span class="term-fgx238">│</span>     &quot;<span class="term-bg42">os</span>&quot;
+<span class="term-fgx238">   6</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">   7</span> <span class="term-fgx238">│</span>     &quot;<span class="term-bg42">github.com&#47;spf13&#47;cobra</span>&quot;
+<span class="term-fgx238">   8</span> <span class="term-fgx238">│</span> <span class="term-bgi101">)</span>
+<span class="term-fgx238">   9</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  10</span> <span class="term-fgx238">│</span> var version <span class="term-bgi101">=</span> &quot;<span class="term-bg42">dev</span>&quot;
+<span class="term-fgx238">  11</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  12</span> <span class="term-fgx238">│</span> func main<span class="term-bgi101">()</span> <span class="term-bgi101">{</span>
+<span class="term-fgx238">  13</span> <span class="term-fgx238">│</span>     root <span class="term-bgi101">:=</span> &amp;cobra.Command<span class="term-bgi101">{</span>
+<span class="term-fgx238">  14</span> <span class="term-fgx238">│</span>         Use:           &quot;<span class="term-bg42">termbook</span>&quot;,
+<span class="term-fgx238">  15</span> <span class="term-fgx238">│</span>         Short:         &quot;<span class="term-bg42">Beautiful, browsable reference pages for your CLI</span>&quot;,
+<span class="term-fgx238">  16</span> <span class="term-fgx238">│</span>         SilenceUsage:  true,
+<span class="term-fgx238">  17</span> <span class="term-fgx238">│</span>         SilenceErrors: true,
+<span class="term-fgx238">  18</span> <span class="term-fgx238">│</span>         Version:       version,
+<span class="term-fgx238">  19</span> <span class="term-fgx238">│</span>     <span class="term-bgi101">}</span>
+<span class="term-fgx238">  20</span> <span class="term-fgx238">│</span>     root.AddCommand<span class="term-bgi101">(</span>newRecordCmd<span class="term-bgi101">()</span>, newBuildCmd<span class="term-bgi101">())</span>
+<span class="term-fgx238">  21</span> <span class="term-fgx238">│</span>
+<span class="term-fgx238">  22</span> <span class="term-fgx238">│</span>     if err <span class="term-bgi101">:=</span> root.Execute<span class="term-bgi101">()</span>; err != nil <span class="term-bgi101">{</span>
+<span class="term-fgx238">  23</span> <span class="term-fgx238">│</span>         fmt.Fprintln<span class="term-bgi101">(</span>os.Stderr, &quot;<span class="term-bg42">termbook:</span>&quot;, err<span class="term-bgi101">)</span>
+<span class="term-fgx238">  24</span> <span class="term-fgx238">│</span>         os.Exit<span class="term-bgi101">(</span>1<span class="term-bgi101">)</span>
+<span class="term-fgx238">  25</span> <span class="term-fgx238">│</span>     <span class="term-bgi101">}</span>
+<span class="term-fgx238">  26</span> <span class="term-fgx238">│</span> <span class="term-bgi101">}</span>
+<span class="term-fgx238">─────┴──────────────────────────────────────────────────────────────────────────</span></pre>
+              </div>
+            </div>
+          </article>
+          
+        </div>
+      </section>
+      
+    </div>
+
+    <footer class="foot">
+      <div>generated with <a href="https://github.com/tiulpin/termbook">termbook</a></div>
+      <div>14 screens · 2026-05-01 18:46</div>
+    </footer>
+    
+  </main>
+</div>
+
+<script>
+(function(){
+  var D = document.documentElement;
+  var saved = localStorage.getItem('termbook-theme');
+  if (saved) D.setAttribute('data-theme', saved);
+  var tDark = document.getElementById('tDark');
+  var tLight = document.getElementById('tLight');
+  function sync(){
+    var t = D.getAttribute('data-theme');
+    tDark.classList.toggle('active', t === 'dark');
+    tLight.classList.toggle('active', t === 'light');
+    tDark.setAttribute('aria-pressed', t === 'dark');
+    tLight.setAttribute('aria-pressed', t === 'light');
+  }
+  sync();
+  function set(t){ D.setAttribute('data-theme', t); localStorage.setItem('termbook-theme', t); sync(); }
+  tDark.addEventListener('click', function(){ set('dark'); });
+  tLight.addEventListener('click', function(){ set('light'); });
+  function toggleTheme(){ set(D.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+  var q = document.getElementById('q');
+  function updateFilter(){
+    var v = q.value.trim().toLowerCase();
+    document.querySelectorAll('.entry').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.side-nav a').forEach(function(el){
+      var hit = !v || (el.dataset.search || '').includes(v);
+      el.classList.toggle('hidden', !hit);
+    });
+    document.querySelectorAll('.section').forEach(function(sec){
+      var visible = sec.querySelectorAll('.entry:not(.hidden)').length;
+      sec.classList.toggle('empty', visible === 0);
+    });
+    document.querySelectorAll('.side-nav .grp').forEach(function(grp){
+      var visible = grp.querySelectorAll('a:not(.hidden)').length;
+      grp.style.display = visible ? '' : 'none';
+    });
+  }
+  q.addEventListener('input', updateFilter);
+
+  var sideEl = document.getElementById('side');
+  var navToggle = document.getElementById('navToggle');
+  function setNavOpen(open){
+    sideEl.classList.toggle('nav-open', open);
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    var icon = navToggle.querySelector('.nav-toggle-icon');
+    var label = navToggle.querySelector('.nav-toggle-label');
+    if (icon) icon.textContent = open ? '✕' : '☰';
+    if (label) label.textContent = open ? 'close' : 'menu';
+  }
+  navToggle.addEventListener('click', function(){
+    setNavOpen(!sideEl.classList.contains('nav-open'));
+  });
+   
+  q.addEventListener('focus', function(){
+    if (window.matchMedia('(max-width: 900px)').matches) setNavOpen(true);
+  });
+   
+  sideEl.addEventListener('click', function(e){
+    if (e.target.closest('.side-nav a') && window.matchMedia('(max-width: 900px)').matches) {
+      setNavOpen(false);
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'INPUT') {
+      if (e.key === 'Escape') { q.value = ''; q.blur(); updateFilter(); }
+      return;
+    }
+    if (e.key === '/') { e.preventDefault(); q.focus(); }
+    else if (e.key === 't' || e.key === 'T') { toggleTheme(); }
+  });
+
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      var link = document.querySelector('.side-nav a[data-cmd="' + e.target.id + '"]');
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('.entry[id]').forEach(function(el){ obs.observe(el); });
+})();
+</script>
+</body>
+</html>

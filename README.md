@@ -9,6 +9,7 @@ Captures ANSI-colored output and renders it as a static page with a grid layout,
 
 ## Examples
 
+- [bat — cat with wings](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/bat/gallery.html)
 - [eza — modern ls](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/eza/gallery.html)
 - [ripgrep — fast recursive search](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tiulpin/termbook/main/examples/ripgrep/gallery.html)
 
