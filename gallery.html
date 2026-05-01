@@ -443,6 +443,8 @@ body {
   display: flex; align-items: baseline; justify-content: space-between;
   font-family: var(--mono); font-size: 10.5px; color: var(--fg-4);
 }
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .attrib {
   display: flex; align-items: center; gap: 14px;
   padding: 18px 0 0;
@@ -651,10 +653,10 @@ body {
       {{end}}
     </div>
 
-    {{if .Decor.Footer}}<footer class="foot">
-      <div>{{.Decor.Footer}}</div>
+    <footer class="foot">
+      <div>{{if .Decor.Footer}}{{.Decor.Footer}}{{else}}generated with <a href="https://github.com/tiulpin/termbook">termbook</a>{{end}}</div>
       <div>{{.ScreenCount}} screens · {{.Generated}}</div>
-    </footer>{{end}}
+    </footer>
     {{if .Decor.Attribution}}<div class="attrib">{{.Decor.Attribution}}</div>{{end}}
   </main>
 </div>
