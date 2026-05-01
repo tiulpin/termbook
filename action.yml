@@ -1,0 +1,83 @@
+name: termbook
+description: Build a termbook gallery from a committed manifest and captures.
+branding:
+  icon: terminal
+  color: gray-dark
+
+inputs:
+  version:
+    description: termbook version to install (e.g. v0.2.0). "latest" picks the most recent release.
+    default: latest
+    required: false
+  output:
+    description: Path to write the generated gallery HTML to.
+    default: gallery.html
+    required: false
+  only:
+    description: Render only the screen with this id.
+    required: false
+  working-directory:
+    description: Directory containing .termbook/termbook.yml.
+    default: .
+    required: false
+
+outputs:
+  output:
+    description: Path of the generated gallery HTML file.
+    value: ${{ steps.build.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install termbook
+      shell: bash
+      env:
+        TERMBOOK_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        os=""
+        case "$(uname -s)" in
+          Darwin) os=macos ;;
+          Linux)  os=linux ;;
+          *) echo "termbook action: unsupported OS $(uname -s)" >&2; exit 1 ;;
+        esac
+
+        arch=""
+        case "$(uname -m)" in
+          x86_64|amd64) arch=x86_64 ;;
+          arm64|aarch64) arch=arm64 ;;
+          *) echo "termbook action: unsupported arch $(uname -m)" >&2; exit 1 ;;
+        esac
+
+        version="$TERMBOOK_VERSION"
+        if [ "$version" = "latest" ]; then
+          version="$(curl -fsSL https://api.github.com/repos/tiulpin/termbook/releases/latest | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+          [ -n "$version" ] || { echo "termbook action: could not resolve latest version" >&2; exit 1; }
+        fi
+        version_no_v="${version#v}"
+
+        url="https://github.com/tiulpin/termbook/releases/download/${version}/termbook_${version_no_v}_${os}_${arch}.tar.gz"
+        echo "termbook action: downloading $url"
+
+        tmp="$(mktemp -d)"
+        curl -fsSL "$url" -o "$tmp/termbook.tar.gz"
+        tar -xzf "$tmp/termbook.tar.gz" -C "$tmp"
+        install -m 0755 "$tmp/termbook" "${RUNNER_TOOL_CACHE:-/usr/local/bin}/termbook"
+        echo "${RUNNER_TOOL_CACHE:-/usr/local/bin}" >> "$GITHUB_PATH"
+
+    - name: Build gallery
+      id: build
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TERMBOOK_OUTPUT: ${{ inputs.output }}
+        TERMBOOK_ONLY: ${{ inputs.only }}
+      run: |
+        set -euo pipefail
+        args=(build -o "$TERMBOOK_OUTPUT")
+        if [ -n "$TERMBOOK_ONLY" ]; then
+          args+=(--only "$TERMBOOK_ONLY")
+        fi
+        termbook "${args[@]}"
+        echo "path=$TERMBOOK_OUTPUT" >> "$GITHUB_OUTPUT"
