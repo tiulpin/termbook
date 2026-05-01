@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -40,6 +41,9 @@ func newBuildCmd() *cobra.Command {
 			}
 			if m.GitHub != "" {
 				opts = append(opts, termbook.WithGitHub(m.GitHub))
+			}
+			if decor, ok := buildDecor(m); ok {
+				opts = append(opts, termbook.WithDecor(decor))
 			}
 			book := termbook.New(m.Title, opts...)
 
@@ -95,4 +99,23 @@ func newBuildCmd() *cobra.Command {
 
 func s2id(s string) string {
 	return config.DeriveID(s)
+}
+
+func buildDecor(m *config.Manifest) (termbook.Decor, bool) {
+	d := termbook.Decor{
+		Kicker: m.Kicker,
+		Lede:   m.Intro,
+		Footer: m.Footer,
+	}
+	if m.Notes != nil && (m.Notes.Title != "" || m.Notes.Body != "") {
+		d.Notes = termbook.Notes{
+			Title: m.Notes.Title,
+			Body:  template.HTML(m.Notes.Body), //nolint:gosec // trusted manifest input
+		}
+	}
+	for _, f := range m.Facts {
+		d.Facts = append(d.Facts, termbook.Fact{Value: f.Value, Label: f.Label})
+	}
+	any := d.Kicker != "" || d.Lede != "" || d.Footer != "" || d.Notes.Title != "" || d.Notes.Body != "" || len(d.Facts) > 0
+	return d, any
 }

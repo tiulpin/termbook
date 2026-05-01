@@ -29,7 +29,22 @@ type Manifest struct {
 	Accent     string     `yaml:"accent,omitempty"`
 	GitHub     string     `yaml:"github,omitempty"`
 	Width      int        `yaml:"width,omitempty"`
+	Intro      string     `yaml:"intro,omitempty"`
+	Kicker     string     `yaml:"kicker,omitempty"`
+	Footer     string     `yaml:"footer,omitempty"`
+	Notes      *Notes     `yaml:"notes,omitempty"`
+	Facts      []Fact     `yaml:"facts,omitempty"`
 	Categories []Category `yaml:"categories,omitempty"`
+}
+
+type Notes struct {
+	Title string `yaml:"title"`
+	Body  string `yaml:"body"`
+}
+
+type Fact struct {
+	Value string `yaml:"value"`
+	Label string `yaml:"label"`
 }
 
 type Category struct {
