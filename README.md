@@ -4,7 +4,7 @@ Generate browsable HTML galleries from CLI terminal output. Like Storybook, but 
 
 Captures ANSI-colored output and renders it as a static page with a grid layout, dark/light themes, click-to-expand terminals, and sidebar navigation.
 
-<img width="3892" height="2196" alt="cli" src="https://github.com/user-attachments/assets/da17c2db-f739-400e-9dd3-d597020f00eb" />
+<img width="1543" height="1136" alt="image" src="https://github.com/user-attachments/assets/f8935e1c-2898-4227-9307-8683fd12f07e" />
 
 
 ## Examples
