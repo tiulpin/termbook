@@ -6,8 +6,15 @@ branding:
 
 inputs:
   version:
-    description: termbook version to install (e.g. v0.2.0). "latest" picks the most recent release.
+    description: |
+      termbook version to install. "latest" picks the most recent release;
+      a tag like "v0.2.0" pins; "source" builds from cmd/termbook in the
+      checked-out repo.
     default: latest
+    required: false
+  source-path:
+    description: Path to cmd/termbook when version=source. Relative to the workflow's working directory.
+    default: ./cmd/termbook
     required: false
   output:
     description: Path to write the generated gallery HTML to.
@@ -29,7 +36,8 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Install termbook
+    - name: Install termbook (release)
+      if: inputs.version != 'source'
       shell: bash
       env:
         TERMBOOK_VERSION: ${{ inputs.version }}
@@ -64,6 +72,25 @@ runs:
         curl -fsSL "$url" -o "$tmp/termbook.tar.gz"
         tar -xzf "$tmp/termbook.tar.gz" -C "$tmp"
         install -m 0755 "$tmp/termbook" "${RUNNER_TOOL_CACHE:-/usr/local/bin}/termbook"
+        echo "${RUNNER_TOOL_CACHE:-/usr/local/bin}" >> "$GITHUB_PATH"
+
+    - name: Install termbook (source)
+      if: inputs.version == 'source'
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: true
+
+    - name: Build termbook from source
+      if: inputs.version == 'source'
+      shell: bash
+      env:
+        TERMBOOK_SOURCE_PATH: ${{ inputs.source-path }}
+      run: |
+        set -euo pipefail
+        out="${RUNNER_TOOL_CACHE:-/usr/local/bin}/termbook"
+        go build -trimpath -ldflags='-s -w -X main.version=source' -o "$out" "$TERMBOOK_SOURCE_PATH"
+        chmod 0755 "$out"
         echo "${RUNNER_TOOL_CACHE:-/usr/local/bin}" >> "$GITHUB_PATH"
 
     - name: Build gallery
