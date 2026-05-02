@@ -4,10 +4,14 @@ manifest. The first invocation scaffolds .termbook/termbook.yml.
 With --only <id>, re-captures an existing entry's command and overwrites
 its capture file without changing the manifest.
 
+With --all, re-captures every entry in the manifest. Useful in CI before
+running `termbook diff`.
+
 Usage:
   termbook record [command...] [flags]
 
 Flags:
+      --all                re-capture every entry in the manifest
       --cat string         category name (default "Screens")
       --desc string        screen description
   -h, --help               help for record

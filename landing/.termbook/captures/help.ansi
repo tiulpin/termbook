@@ -6,6 +6,7 @@ Usage:
 Available Commands:
   build       Render gallery.html from the manifest and captures
   completion  Generate the autocompletion script for the specified shell
+  diff        Compare current captures against a baseline
   help        Help about any command
   record      Capture a command's output and add it to the manifest
 
