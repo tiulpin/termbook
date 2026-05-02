@@ -1,9 +1,11 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +26,7 @@ func newRecordCmd() *cobra.Command {
 		width   int
 		timeout time.Duration
 		only    string
+		all     bool
 	)
 	cmd := &cobra.Command{
 		Use:   "record [command...]",
@@ -32,18 +35,32 @@ func newRecordCmd() *cobra.Command {
 manifest. The first invocation scaffolds .termbook/termbook.yml.
 
 With --only <id>, re-captures an existing entry's command and overwrites
-its capture file without changing the manifest.`,
+its capture file without changing the manifest.
+
+With --all, re-captures every entry in the manifest. Useful in CI before
+running ` + "`termbook diff`" + `.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cc *cobra.Command, args []string) error {
 			workdir, err := os.Getwd()
 			if err != nil {
 				return err
 			}
-			if only != "" && len(args) > 0 {
-				return errors.New("--only is mutually exclusive with a positional command")
+
+			modes := 0
+			if all {
+				modes++
 			}
-			if only == "" && len(args) == 0 {
-				return errors.New("provide a command to record, or use --only <id>")
+			if only != "" {
+				modes++
+			}
+			if len(args) > 0 {
+				modes++
+			}
+			if modes > 1 {
+				return errors.New("--all, --only, and a positional command are mutually exclusive")
+			}
+			if modes == 0 {
+				return errors.New("provide a command to record, or use --only <id> or --all")
 			}
 
 			manifestPath := config.ManifestPath(workdir)
@@ -51,6 +68,10 @@ its capture file without changing the manifest.`,
 			m, _, err := config.LoadOrInit(manifestPath, defaultTitle)
 			if err != nil {
 				return err
+			}
+
+			if all {
+				return recordAll(cc.Context(), cc.OutOrStdout(), workdir, m, captureOpts(width, m.Width, timeout))
 			}
 
 			var screen config.Screen
@@ -67,35 +88,14 @@ its capture file without changing the manifest.`,
 				}
 				screen = config.Screen{
 					ID:      id,
-					Title:   firstNonEmpty(title, cmdStr),
+					Title:   cmp.Or(title, cmdStr),
 					Desc:    desc,
 					Command: cmdStr,
 				}
 			}
 
-			effectiveWidth := width
-			if effectiveWidth <= 0 {
-				effectiveWidth = m.Width
-			}
-
-			ctx, cancel := context.WithCancel(cc.Context())
-			defer cancel()
-			res, err := capture.Run(ctx, []string{"sh", "-c", screen.Command}, capture.Options{
-				Width:   effectiveWidth,
-				Timeout: timeout,
-			})
+			res, err := recordOne(cc.Context(), workdir, screen, captureOpts(width, m.Width, timeout))
 			if err != nil {
-				return err
-			}
-			if res.TimedOut {
-				return fmt.Errorf("timed out after %s: %s", timeout, screen.Command)
-			}
-
-			capPath := config.CapturePath(workdir, screen.ID)
-			if err := os.MkdirAll(filepath.Dir(capPath), 0o755); err != nil {
-				return err
-			}
-			if err := os.WriteFile(capPath, res.Output, 0o644); err != nil {
 				return err
 			}
 
@@ -122,14 +122,57 @@ its capture file without changing the manifest.`,
 	cmd.Flags().IntVar(&width, "width", 0, "PTY columns (default: manifest width or 120)")
 	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Second, "per-command timeout")
 	cmd.Flags().StringVar(&only, "only", "", "re-capture an existing entry by id without modifying the manifest")
+	cmd.Flags().BoolVar(&all, "all", false, "re-capture every entry in the manifest")
 	return cmd
 }
 
-func firstNonEmpty(s ...string) string {
-	for _, v := range s {
-		if v != "" {
-			return v
+func captureOpts(flagWidth, manifestWidth int, timeout time.Duration) capture.Options {
+	return capture.Options{Width: cmp.Or(flagWidth, manifestWidth), Timeout: timeout}
+}
+
+func recordOne(ctx context.Context, workdir string, screen config.Screen, opts capture.Options) (*capture.Result, error) {
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	res, err := capture.Run(runCtx, []string{"sh", "-c", screen.Command}, opts)
+	if err != nil {
+		return nil, err
+	}
+	if res.TimedOut {
+		return res, fmt.Errorf("timed out after %s: %s", opts.Timeout, screen.Command)
+	}
+	capPath := config.CapturePath(workdir, screen.ID)
+	if err := os.MkdirAll(filepath.Dir(capPath), 0o755); err != nil {
+		return res, err
+	}
+	if err := os.WriteFile(capPath, res.Output, 0o644); err != nil {
+		return res, err
+	}
+	return res, nil
+}
+
+func recordAll(ctx context.Context, out io.Writer, workdir string, m *config.Manifest, opts capture.Options) error {
+	total, ok, fail := 0, 0, 0
+	for _, c := range m.Categories {
+		for _, s := range c.Screens {
+			total++
+			res, err := recordOne(ctx, workdir, s, opts)
+			switch {
+			case err != nil:
+				fail++
+				fmt.Fprintf(out, "FAIL %s: %v\n", s.ID, err)
+			case res.ExitCode != 0:
+				fail++
+				fmt.Fprintf(out, "FAIL %s (exit %d, %d bytes)\n", s.ID, res.ExitCode, len(res.Output))
+			default:
+				ok++
+				fmt.Fprintf(out, "  ok %s (%d bytes)\n", s.ID, len(res.Output))
+			}
 		}
 	}
-	return ""
+	fmt.Fprintf(out, "\n%d captured, %d failed (of %d)\n", ok, fail, total)
+	if fail > 0 {
+		return fmt.Errorf("%d capture(s) failed", fail)
+	}
+	return nil
 }
+
