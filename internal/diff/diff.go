@@ -110,13 +110,18 @@ func DirReader(root string) BaselineReader {
 	}
 }
 
-// GitHEADReader reads baseline captures via `git show HEAD:<rel>` from
+// GitHEADReader is shorthand for GitRefReader at HEAD.
+func GitHEADReader(repoRoot, captureRelDir string) BaselineReader {
+	return GitRefReader(repoRoot, "HEAD", captureRelDir)
+}
+
+// GitRefReader reads baseline captures via `git show <ref>:<rel>` from
 // the repo root. captureRelDir is the path of the captures directory
 // relative to the repo root (e.g. `examples/eza/.termbook/captures`).
-func GitHEADReader(repoRoot, captureRelDir string) BaselineReader {
+func GitRefReader(repoRoot, ref, captureRelDir string) BaselineReader {
 	return func(id string) ([]byte, error) {
 		rel := filepath.ToSlash(filepath.Join(captureRelDir, id+".ansi"))
-		cmd := exec.Command("git", "show", "HEAD:"+rel)
+		cmd := exec.Command("git", "show", ref+":"+rel)
 		cmd.Dir = repoRoot
 		out, err := cmd.Output()
 		if err != nil {

@@ -32,7 +32,10 @@ inputs:
     default: .
     required: false
   baseline:
-    description: Directory of <id>.ansi files to diff against (diff mode). Defaults to git HEAD.
+    description: Directory of <id>.ansi files to diff against (diff mode). Mutually exclusive with baseline-ref.
+    required: false
+  baseline-ref:
+    description: Git ref to diff against (e.g. main). Defaults to HEAD. Use the PR base ref for "what changed in this PR" workflows.
     required: false
   report-md:
     description: Markdown report path (diff mode). Designed for `gh pr comment --body-file`.
@@ -147,6 +150,7 @@ runs:
         TERMBOOK_REPORT_MD: ${{ inputs.report-md }}
         TERMBOOK_REPORT_HTML: ${{ inputs.report-html }}
         TERMBOOK_BASELINE: ${{ inputs.baseline }}
+        TERMBOOK_BASELINE_REF: ${{ inputs.baseline-ref }}
         TERMBOOK_FAIL: ${{ inputs.fail-on-change }}
       run: |
         set -euo pipefail
@@ -157,6 +161,9 @@ runs:
         fi
         if [ -n "$TERMBOOK_BASELINE" ]; then
           args+=(--baseline "$TERMBOOK_BASELINE")
+        fi
+        if [ -n "$TERMBOOK_BASELINE_REF" ]; then
+          args+=(--baseline-ref "$TERMBOOK_BASELINE_REF")
         fi
         rc=0
         termbook "${args[@]}" || rc=$?
