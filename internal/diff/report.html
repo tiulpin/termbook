@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>termbook diff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+:root, [data-theme="dark"] {
+  --bg: #0b0d10; --bg-1: #111419; --bg-2: #161a20;
+  --line: #242a33; --line-2: #2f3742;
+  --fg: #e6e8eb; --fg-2: #b6bcc5; --fg-3: #7d8693; --fg-4: #4a525d;
+  --green:  oklch(0.78 0.14 150);
+  --red:    oklch(0.72 0.17 25);
+  --yellow: oklch(0.82 0.15 85);
+  --cyan:   oklch(0.80 0.12 210);
+  --blue:   oklch(0.74 0.14 240);
+  --magenta:oklch(0.74 0.15 330);
+  --add: oklch(0.78 0.14 150);
+  --del: oklch(0.72 0.17 25);
+  --mod: oklch(0.82 0.15 85);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 32px 36px 80px; }
+header.top { padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+header.top h1 {
+  font-family: var(--mono); font-weight: 600;
+  font-size: 28px; letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+header.top h1 .slash { color: var(--mod); }
+.summary {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--fg-3); margin: 0;
+}
+.summary b { color: var(--fg); font-weight: 500; }
+.summary .add { color: var(--add); }
+.summary .del { color: var(--del); }
+.summary .mod { color: var(--mod); }
+.empty {
+  font-family: var(--sans); color: var(--fg-3);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 28px; text-align: center;
+}
+article.change {
+  margin: 28px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-1);
+  overflow: hidden;
+}
+article.change > header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+article.change h2 {
+  font-family: var(--sans); font-weight: 600;
+  font-size: 15px; margin: 0; color: var(--fg);
+}
+.badge {
+  font-family: var(--mono); font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+.badge.modified { color: var(--mod); }
+.badge.added    { color: var(--add); }
+.badge.removed  { color: var(--del); }
+.meta {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4);
+  display: flex; gap: 12px;
+}
+.cmd {
+  display: block;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--fg-3);
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-1);
+  white-space: pre-wrap; word-break: break-word;
+}
+.cmd::before { content: "$ "; color: var(--fg-4); }
+.terms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--line);
+}
+.term { background: var(--bg); padding: 0; min-width: 0; }
+.term h3 {
+  margin: 0;
+  padding: 8px 14px;
+  font-family: var(--mono); font-weight: 500;
+  font-size: 10.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--fg-3);
+  border-bottom: 1px solid var(--line);
+}
+.term-before h3 { color: var(--del); }
+.term-after  h3 { color: var(--add); }
+.term pre {
+  margin: 0;
+  padding: 14px;
+  font-family: var(--mono); font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: transparent;
+  overflow-x: auto;
+  white-space: pre;
+  min-height: 80px;
+}
+.term.empty-pane pre { color: var(--fg-4); }
+@media (max-width: 880px) {
+  .terms { grid-template-columns: 1fr; }
+}
+.term .term-fg30, .term .term-fg30 * { color: var(--fg-4); }
+.term .term-fg31, .term .term-fg31 * { color: var(--red); }
+.term .term-fg32, .term .term-fg32 * { color: var(--green); }
+.term .term-fg33, .term .term-fg33 * { color: var(--yellow); }
+.term .term-fg34, .term .term-fg34 * { color: var(--blue); }
+.term .term-fg35, .term .term-fg35 * { color: var(--magenta); }
+.term .term-fg36, .term .term-fg36 * { color: var(--cyan); }
+.term .term-fg37, .term .term-fg37 * { color: var(--fg-2); }
+.term .term-fg90, .term .term-fg90 * { color: var(--fg-4); }
+.term .term-fg91, .term .term-fg91 * { color: var(--red); }
+.term .term-fg92, .term .term-fg92 * { color: var(--green); }
+.term .term-fg93, .term .term-fg93 * { color: var(--yellow); }
+.term .term-fg94, .term .term-fg94 * { color: var(--blue); }
+.term .term-fg95, .term .term-fg95 * { color: var(--magenta); }
+.term .term-fg96, .term .term-fg96 * { color: var(--cyan); }
+.term .term-fg97, .term .term-fg97 * { color: var(--fg); }
+.foot {
+  margin-top: 48px; padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--fg-4);
+  display: flex; justify-content: space-between;
+}
+.foot a { color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+.foot a:hover { color: var(--mod); border-bottom-color: var(--mod); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1><span class="slash">±</span> termbook diff</h1>
+    <p class="summary">
+      {{if .S.Modified}}<b class="mod">{{.S.Modified}} modified</b> ·{{end}}
+      {{if .S.Added}}<b class="add">{{.S.Added}} added</b> ·{{end}}
+      {{if .S.Removed}}<b class="del">{{.S.Removed}} removed</b> ·{{end}}
+      <b>{{.S.Unchanged}} unchanged</b> · {{.Total}} total
+    </p>
+  </header>
+
+  {{if not .Changed}}
+    <p class="empty">No changes detected.</p>
+  {{end}}
+
+  {{range .Changes}}
+    {{if ne (printf "%s" .Status) "unchanged"}}
+    <article class="change">
+      <header>
+        <span class="badge {{.Status}}">{{.Status}}</span>
+        <h2>{{.Title}}</h2>
+        <div class="meta">
+          <span>{{.Category}}</span>
+          <span>{{.ID}}</span>
+        </div>
+      </header>
+      {{if .Command}}<code class="cmd">{{.Command}}</code>{{end}}
+      <div class="terms">
+        <div class="term term-before {{if not .BaselineHTML}}empty-pane{{end}}">
+          <h3>baseline</h3>
+          <pre>{{if .BaselineHTML}}{{.BaselineHTML}}{{else}}(not in baseline){{end}}</pre>
+        </div>
+        <div class="term term-after {{if not .CurrentHTML}}empty-pane{{end}}">
+          <h3>current</h3>
+          <pre>{{if .CurrentHTML}}{{.CurrentHTML}}{{else}}(removed){{end}}</pre>
+        </div>
+      </div>
+    </article>
+    {{end}}
+  {{end}}
+
+  <footer class="foot">
+    <span>generated {{.Generated}}</span>
+    <span>with <a href="https://github.com/tiulpin/termbook">termbook</a></span>
+  </footer>
+</div>
+</body>
+</html>
