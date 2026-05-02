@@ -12,7 +12,7 @@ inputs:
   version:
     description: |
       termbook version to install. "latest" picks the most recent release;
-      a tag like "v0.2.0" pins; "source" builds from cmd/termbook in the
+      a tag like "v0.3.0" pins; "source" builds from cmd/termbook in the
       checked-out repo.
     default: latest
     required: false

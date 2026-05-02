@@ -3,7 +3,7 @@ accent: "#7BB7E8"
 github: https://github.com/tiulpin/termbook
 width: 120
 
-kicker: v0.2 · open source · self-hosted
+kicker: v0.3 · open source · self-hosted
 intro: >
   Generate browsable HTML galleries from CLI terminal output. Like Storybook,
   but for command-line tools. Captures ANSI in a real PTY and renders it as
@@ -42,6 +42,9 @@ categories:
       - id: build-help
         title: build
         command: termbook build --help
+      - id: diff-help
+        title: diff
+        command: termbook diff --help
       - id: manifest-yaml
         title: a real manifest
         command: cat ../examples/eza/.termbook/termbook.yml

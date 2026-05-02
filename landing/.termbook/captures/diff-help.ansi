@@ -1,0 +1,20 @@
+Compare the captures under .termbook/captures/ to a baseline and
+report what changed. Defaults to comparing against the captures committed
+at git HEAD; use --baseline to point at any directory containing
+<id>.ansi files instead.
+
+Manifest-level redact: rules are applied before comparison, so volatile
+bits like timestamps don't drown out real diffs.
+
+Exits 1 when any screen has changed, added, or been removed.
+
+Usage:
+  termbook diff [flags]
+
+Flags:
+      --baseline string       directory of <id>.ansi files (default: git HEAD)
+      --baseline-ref string   git ref to use as baseline (e.g. main); default HEAD
+  -h, --help                  help for diff
+      --quiet                 print summary only, no per-line hunks
+      --report-html string    also write an HTML report to this path
+      --report-md string      also write a Markdown report (suitable for PR comments) to this path

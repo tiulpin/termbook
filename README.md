@@ -2,7 +2,7 @@
 
 Generate browsable HTML galleries from CLI terminal output. Like Storybook, but for command-line tools.
 
-Captures ANSI-colored output and renders it as a static page with a grid layout, dark/light themes, click-to-expand terminals, and sidebar navigation.
+Captures ANSI in a real PTY and renders a static page with sidebar nav, dark/light themes, and a fuzzy filter. The same captures power `termbook diff`, which re-records on every PR, applies redaction, and posts a unified diff straight into PR review — [live example](https://github.com/tiulpin/termbook/pull/1#issuecomment-4363705991).
 
 <img width="1543" height="1136" alt="image" src="https://github.com/user-attachments/assets/f8935e1c-2898-4227-9307-8683fd12f07e" />
 
@@ -84,6 +84,8 @@ redact:
 ```
 
 Reports are written either as Markdown (`--report-md` — designed for `gh pr comment --body-file`) or self-contained HTML (`--report-html`).
+
+For a real-world example, see the [comment posted on PR #1 of this repo](https://github.com/tiulpin/termbook/pull/1#issuecomment-4363705991): the diff workflow caught every change v0.3 made to the CLI's help text and the eza manifest's redact rules, with no hand-written content.
 
 ## GitHub Action
 
