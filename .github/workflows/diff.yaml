@@ -1,0 +1,35 @@
+name: diff
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  landing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        uses: ./
+        with:
+          mode: diff
+          version: source
+          working-directory: landing
+          baseline-ref: origin/${{ github.event.pull_request.base.ref }}
+          fail-on-change: 'false'
+
+      - if: steps.diff.outputs.changed == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ steps.diff.outputs.report-md }}
+          header: termbook-landing
