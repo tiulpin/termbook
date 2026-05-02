@@ -79,8 +79,7 @@ func Run(ctx context.Context, argv []string, opts Options) (*Result, error) {
 		return res, fmt.Errorf("capture: read pty: %w", copyErr)
 	}
 	if waitErr != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(waitErr, &exitErr) {
+		if _, ok := errors.AsType[*exec.ExitError](waitErr); !ok {
 			return res, fmt.Errorf("capture: wait: %w", waitErr)
 		}
 	}
