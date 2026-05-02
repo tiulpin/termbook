@@ -65,21 +65,63 @@ categories:
 |------|-------|
 | `record <cmd...>` | `--id`, `--cat`, `--title`, `--desc`, `--width` (default 120), `--timeout` (default 30s) |
 | `record --only <id>` | Re-capture an existing entry without touching the manifest |
+| `record --all` | Re-capture every entry in the manifest |
 | `build` | `-o <path>` (default `gallery.html`), `--only <id>` to render a single screen |
+| `diff` | `--baseline <dir>`, `--report-md <path>`, `--report-html <path>`, `--quiet`. Exits 1 when any screen changed |
 
 The PTY is started with `TERM=xterm-256color`, `COLORTERM=truecolor`, and a fixed `COLUMNS`, so tools that disable color outside a terminal still emit ANSI.
 
-## GitHub Action
+## Diff and redaction
+
+`termbook diff` re-runs nothing on its own — call `termbook record --all` first to refresh captures, then compare against the baseline (git HEAD by default). Volatile bits like timestamps drown out real changes, so the manifest carries a top-level `redact:` list of regex rules applied during comparison only:
 
 ```yaml
-- uses: tiulpin/termbook@v0.2.0
+redact:
+  - pattern: '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+    replace: TIMESTAMP
+  - pattern: '\b[a-f0-9]{40}\b'
+    replace: COMMIT_HASH
+```
+
+Reports are written either as Markdown (`--report-md` — designed for `gh pr comment --body-file`) or self-contained HTML (`--report-html`).
+
+## GitHub Action
+
+Two modes. `mode: build` renders a gallery; `mode: diff` re-records, compares, and writes a Markdown report you can post on the PR.
+
+Build:
+
+```yaml
+- uses: tiulpin/termbook@v0.3.0
   with:
     output: site/index.html
 - uses: actions/upload-pages-artifact@v3
   with: { path: site }
 ```
 
-The action installs the released binary and runs `build` against committed captures. To re-record commands in CI, run `termbook record --only <id>` for each entry before the action.
+Diff with a sticky PR comment:
+
+```yaml
+on: pull_request
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, pull-requests: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: diff
+        uses: tiulpin/termbook@v0.3.0
+        with:
+          mode: diff
+          fail-on-change: 'false'
+      - if: steps.diff.outputs.changed == 'true'
+        run: gh pr comment "$PR" --body-file "${{ steps.diff.outputs.report-md }}" --edit-last
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+```
 
 ## Library API
 

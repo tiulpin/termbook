@@ -2,6 +2,11 @@ title: eza – modern ls
 accent: "#3FB950"
 github: https://github.com/eza-community/eza
 width: 120
+redact:
+  - pattern: '\b\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{2}:\d{2}\b'
+    replace: 'DD MMM HH:MM'
+  - pattern: '\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}\b'
+    replace: 'YYYY-MM-DD HH:MM'
 categories:
   - name: Listing
     id: listing
