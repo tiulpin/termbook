@@ -17,7 +17,7 @@ func main() {
 		SilenceErrors: true,
 		Version:       version,
 	}
-	root.AddCommand(newRecordCmd(), newBuildCmd())
+	root.AddCommand(newRecordCmd(), newBuildCmd(), newDiffCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "termbook:", err)
