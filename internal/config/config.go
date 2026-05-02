@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"os"
@@ -25,16 +26,24 @@ func CapturePath(workdir, id string) string {
 }
 
 type Manifest struct {
-	Title      string     `yaml:"title"`
-	Accent     string     `yaml:"accent,omitempty"`
-	GitHub     string     `yaml:"github,omitempty"`
-	Width      int        `yaml:"width,omitempty"`
-	Intro      string     `yaml:"intro,omitempty"`
-	Kicker     string     `yaml:"kicker,omitempty"`
-	Footer     string     `yaml:"footer,omitempty"`
-	Notes      *Notes     `yaml:"notes,omitempty"`
-	Facts      []Fact     `yaml:"facts,omitempty"`
-	Categories []Category `yaml:"categories,omitempty"`
+	Title      string       `yaml:"title"`
+	Accent     string       `yaml:"accent,omitempty"`
+	GitHub     string       `yaml:"github,omitempty"`
+	Width      int          `yaml:"width,omitempty"`
+	Intro      string       `yaml:"intro,omitempty"`
+	Kicker     string       `yaml:"kicker,omitempty"`
+	Footer     string       `yaml:"footer,omitempty"`
+	Notes      *Notes       `yaml:"notes,omitempty"`
+	Facts      []Fact       `yaml:"facts,omitempty"`
+	Redact     []RedactRule `yaml:"redact,omitempty"`
+	Categories []Category   `yaml:"categories,omitempty"`
+}
+
+// RedactRule is applied during diff comparison only. Pattern is a Go
+// regexp; Replace is the literal replacement (with $1, $2 backreferences).
+type RedactRule struct {
+	Pattern string `yaml:"pattern"`
+	Replace string `yaml:"replace"`
 }
 
 type Notes struct {
@@ -85,9 +94,7 @@ func (m *Manifest) Save(path string) error {
 }
 
 func (m *Manifest) UpsertScreen(catName string, s Screen) {
-	if catName == "" {
-		catName = "Screens"
-	}
+	catName = cmp.Or(catName, "Screens")
 	for ci, c := range m.Categories {
 		if c.Name == catName {
 			for si, existing := range c.Screens {
@@ -120,15 +127,9 @@ func (m *Manifest) FindScreen(id string) *Screen {
 
 // Re-record with --id keeps prior title/desc unless the caller passes new ones.
 func mergeScreen(existing, incoming Screen) Screen {
-	if incoming.Title == "" {
-		incoming.Title = existing.Title
-	}
-	if incoming.Desc == "" {
-		incoming.Desc = existing.Desc
-	}
-	if incoming.Command == "" {
-		incoming.Command = existing.Command
-	}
+	incoming.Title = cmp.Or(incoming.Title, existing.Title)
+	incoming.Desc = cmp.Or(incoming.Desc, existing.Desc)
+	incoming.Command = cmp.Or(incoming.Command, existing.Command)
 	return incoming
 }
 
@@ -149,11 +150,7 @@ func slugify(s string) string {
 			prevDash = true
 		}
 	}
-	out := strings.Trim(b.String(), "-")
-	if out == "" {
-		return "screen"
-	}
-	return out
+	return cmp.Or(strings.Trim(b.String(), "-"), "screen")
 }
 
 func LoadOrInit(path, defaultTitle string) (*Manifest, bool, error) {
