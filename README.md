@@ -67,7 +67,7 @@ categories:
 | `record --only <id>` | Re-capture an existing entry without touching the manifest |
 | `record --all` | Re-capture every entry in the manifest |
 | `build` | `-o <path>` (default `gallery.html`), `--only <id>` to render a single screen |
-| `diff` | `--baseline <dir>`, `--report-md <path>`, `--report-html <path>`, `--quiet`. Exits 1 when any screen changed |
+| `diff` | `--baseline <dir>`, `--baseline-ref <ref>`, `--report-md <path>`, `--report-html <path>`, `--quiet`. Exits 1 when any screen changed |
 
 The PTY is started with `TERM=xterm-256color`, `COLORTERM=truecolor`, and a fixed `COLUMNS`, so tools that disable color outside a terminal still emit ANSI.
 
