@@ -310,9 +310,7 @@ func normalizeScreens(cats []Category) []Category {
 	for i, c := range cats {
 		screens := make([]Screen, len(c.Screens))
 		for j, s := range c.Screens {
-			if s.NavLabel == "" {
-				s.NavLabel = s.Title
-			}
+			s.NavLabel = cmp.Or(s.NavLabel, s.Title)
 			screens[j] = s
 		}
 		c.Screens = screens

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"html/template"
@@ -66,10 +67,7 @@ func newBuildCmd() *cobra.Command {
 				if len(screens) == 0 {
 					continue
 				}
-				catID := c.ID
-				if catID == "" {
-					catID = s2id(c.Name)
-				}
+				catID := cmp.Or(c.ID, config.DeriveID(c.Name))
 				if c.Blurb != "" {
 					book.CategoryWithBlurb(c.Name, catID, c.Blurb, screens...)
 				} else {
@@ -97,10 +95,6 @@ func newBuildCmd() *cobra.Command {
 	return cmd
 }
 
-func s2id(s string) string {
-	return config.DeriveID(s)
-}
-
 func buildDecor(m *config.Manifest) (termbook.Decor, bool) {
 	d := termbook.Decor{
 		Kicker: m.Kicker,
@@ -116,6 +110,6 @@ func buildDecor(m *config.Manifest) (termbook.Decor, bool) {
 	for _, f := range m.Facts {
 		d.Facts = append(d.Facts, termbook.Fact{Value: f.Value, Label: f.Label})
 	}
-	any := d.Kicker != "" || d.Lede != "" || d.Footer != "" || d.Notes.Title != "" || d.Notes.Body != "" || len(d.Facts) > 0
-	return d, any
+	populated := d.Kicker != "" || d.Lede != "" || d.Footer != "" || d.Notes.Title != "" || d.Notes.Body != "" || len(d.Facts) > 0
+	return d, populated
 }
