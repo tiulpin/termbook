@@ -139,7 +139,7 @@ runs:
           args+=(--only "$TERMBOOK_ONLY")
         fi
         termbook "${args[@]}"
-        echo "path=$TERMBOOK_OUTPUT" >> "$GITHUB_OUTPUT"
+        echo "path=$(realpath "$TERMBOOK_OUTPUT")" >> "$GITHUB_OUTPUT"
 
     - name: Re-record and diff
       if: inputs.mode == 'diff'
@@ -167,9 +167,9 @@ runs:
         fi
         rc=0
         termbook "${args[@]}" || rc=$?
-        echo "report-md=$TERMBOOK_REPORT_MD" >> "$GITHUB_OUTPUT"
+        echo "report-md=$(realpath "$TERMBOOK_REPORT_MD")" >> "$GITHUB_OUTPUT"
         if [ -n "$TERMBOOK_REPORT_HTML" ]; then
-          echo "report-html=$TERMBOOK_REPORT_HTML" >> "$GITHUB_OUTPUT"
+          echo "report-html=$(realpath "$TERMBOOK_REPORT_HTML")" >> "$GITHUB_OUTPUT"
         fi
         if [ "$rc" -eq 0 ]; then
           echo "changed=false" >> "$GITHUB_OUTPUT"
