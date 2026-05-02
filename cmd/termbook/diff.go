@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 func newDiffCmd() *cobra.Command {
 	var (
 		baselineDir string
+		baselineRef string
 		reportHTML  string
 		reportMD    string
 		quiet       bool
@@ -46,7 +48,7 @@ Exits 1 when any screen has changed, added, or been removed.`,
 				return err
 			}
 
-			reader, err := resolveBaselineReader(workdir, baselineDir)
+			reader, err := resolveBaselineReader(workdir, baselineDir, baselineRef)
 			if err != nil {
 				return err
 			}
@@ -78,14 +80,18 @@ Exits 1 when any screen has changed, added, or been removed.`,
 		},
 	}
 	cmd.Flags().StringVar(&baselineDir, "baseline", "", "directory of <id>.ansi files (default: git HEAD)")
+	cmd.Flags().StringVar(&baselineRef, "baseline-ref", "", "git ref to use as baseline (e.g. main); default HEAD")
 	cmd.Flags().StringVar(&reportHTML, "report-html", "", "also write an HTML report to this path")
 	cmd.Flags().StringVar(&reportMD, "report-md", "", "also write a Markdown report (suitable for PR comments) to this path")
 	cmd.Flags().BoolVar(&quiet, "quiet", false, "print summary only, no per-line hunks")
 	return cmd
 }
 
-func resolveBaselineReader(workdir, baselineDir string) (diff.BaselineReader, error) {
+func resolveBaselineReader(workdir, baselineDir, baselineRef string) (diff.BaselineReader, error) {
 	if baselineDir != "" {
+		if baselineRef != "" {
+			return nil, errors.New("--baseline and --baseline-ref are mutually exclusive")
+		}
 		return diff.DirReader(baselineDir), nil
 	}
 	repoRoot, err := diff.GitRepoRoot(workdir)
@@ -97,7 +103,8 @@ func resolveBaselineReader(workdir, baselineDir string) (diff.BaselineReader, er
 		return nil, err
 	}
 	captureRelDir := filepath.Join(relWork, config.Dir, config.CapturesDir)
-	return diff.GitHEADReader(repoRoot, captureRelDir), nil
+	ref := cmp.Or(baselineRef, "HEAD")
+	return diff.GitRefReader(repoRoot, ref, captureRelDir), nil
 }
 
 func printDiff(out io.Writer, changes []diff.Change, quiet bool) {

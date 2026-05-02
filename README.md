@@ -115,13 +115,16 @@ jobs:
         uses: tiulpin/termbook@v0.3.0
         with:
           mode: diff
+          baseline-ref: origin/${{ github.event.pull_request.base.ref }}
           fail-on-change: 'false'
       - if: steps.diff.outputs.changed == 'true'
-        run: gh pr comment "$PR" --body-file "${{ steps.diff.outputs.report-md }}" --edit-last
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: ${{ steps.diff.outputs.report-md }}
+          header: termbook
 ```
+
+`baseline-ref` is what makes the comparison meaningful on a PR — it diffs the freshly recorded captures against whatever was committed on the base branch, not against the PR's own tip. The `header` keeps the bot's comment sticky across pushes; if you have several galleries to diff, give each its own header.
 
 ## Library API
 
