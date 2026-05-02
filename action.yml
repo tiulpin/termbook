@@ -1,10 +1,14 @@
 name: termbook
-description: Build a termbook gallery from a committed manifest and captures.
+description: Build a termbook gallery, or diff committed captures against fresh ones.
 branding:
   icon: terminal
   color: gray-dark
 
 inputs:
+  mode:
+    description: '"build" renders gallery.html. "diff" re-records every screen and compares against the captures committed at git HEAD.'
+    default: build
+    required: false
   version:
     description: |
       termbook version to install. "latest" picks the most recent release;
@@ -17,21 +21,45 @@ inputs:
     default: ./cmd/termbook
     required: false
   output:
-    description: Path to write the generated gallery HTML to.
+    description: Path to write the generated gallery HTML to (build mode).
     default: gallery.html
     required: false
   only:
-    description: Render only the screen with this id.
+    description: Render only the screen with this id (build mode).
     required: false
   working-directory:
     description: Directory containing .termbook/termbook.yml.
     default: .
     required: false
+  baseline:
+    description: Directory of <id>.ansi files to diff against (diff mode). Defaults to git HEAD.
+    required: false
+  report-md:
+    description: Markdown report path (diff mode). Designed for `gh pr comment --body-file`.
+    default: termbook-diff.md
+    required: false
+  report-html:
+    description: Optional HTML report path (diff mode). Empty disables.
+    default: ''
+    required: false
+  fail-on-change:
+    description: When "true" (default), diff mode exits non-zero on any change. Set to "false" to keep going so a later step can post the report.
+    default: 'true'
+    required: false
 
 outputs:
   output:
-    description: Path of the generated gallery HTML file.
+    description: Path of the generated gallery HTML (build mode).
     value: ${{ steps.build.outputs.path }}
+  report-md:
+    description: Path of the Markdown diff report (diff mode).
+    value: ${{ steps.diff.outputs.report-md }}
+  report-html:
+    description: Path of the HTML diff report (diff mode), if requested.
+    value: ${{ steps.diff.outputs.report-html }}
+  changed:
+    description: '"true" when diff mode found at least one modified, added, or removed screen.'
+    value: ${{ steps.diff.outputs.changed }}
 
 runs:
   using: composite
@@ -94,6 +122,7 @@ runs:
         echo "${RUNNER_TOOL_CACHE:-/usr/local/bin}" >> "$GITHUB_PATH"
 
     - name: Build gallery
+      if: inputs.mode == 'build'
       id: build
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -108,3 +137,38 @@ runs:
         fi
         termbook "${args[@]}"
         echo "path=$TERMBOOK_OUTPUT" >> "$GITHUB_OUTPUT"
+
+    - name: Re-record and diff
+      if: inputs.mode == 'diff'
+      id: diff
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TERMBOOK_REPORT_MD: ${{ inputs.report-md }}
+        TERMBOOK_REPORT_HTML: ${{ inputs.report-html }}
+        TERMBOOK_BASELINE: ${{ inputs.baseline }}
+        TERMBOOK_FAIL: ${{ inputs.fail-on-change }}
+      run: |
+        set -euo pipefail
+        termbook record --all
+        args=(diff --quiet --report-md "$TERMBOOK_REPORT_MD")
+        if [ -n "$TERMBOOK_REPORT_HTML" ]; then
+          args+=(--report-html "$TERMBOOK_REPORT_HTML")
+        fi
+        if [ -n "$TERMBOOK_BASELINE" ]; then
+          args+=(--baseline "$TERMBOOK_BASELINE")
+        fi
+        rc=0
+        termbook "${args[@]}" || rc=$?
+        echo "report-md=$TERMBOOK_REPORT_MD" >> "$GITHUB_OUTPUT"
+        if [ -n "$TERMBOOK_REPORT_HTML" ]; then
+          echo "report-html=$TERMBOOK_REPORT_HTML" >> "$GITHUB_OUTPUT"
+        fi
+        if [ "$rc" -eq 0 ]; then
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          if [ "$TERMBOOK_FAIL" = "true" ]; then
+            exit "$rc"
+          fi
+        fi
